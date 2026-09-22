@@ -52,12 +52,12 @@ export function buildPrompt(state, questions, lang = 'ja') {
 // A short prompt for the response after each choice. Keeping it small matters on CPU.
 export function buildCommentPrompt({ npc, sceneName, answer, lang = 'ja' }) {
   if (lang === 'en') return [
-    { role:'system', content:`You are ${npc.name} in EMBER. ${npc.persona} Speak in your own voice. Ask one specific, unsettling but gentle question about the choice. Under 30 words. No diagnosis, praise, or invented past.` },
-    { role:'user', content:`Scene: ${sceneName}\nChoice: ${String(answer).slice(0, 220)}\nWhat did this choice protect, and what might it cost? Respond with one question.` },
+    { role:'system', content:`You are ${npc.name}. ${npc.persona} Ask one brief, thought provoking question about this choice. English only; no diagnosis or invented past.` },
+    { role:'user', content:`Scene: ${sceneName}\nChoice: ${String(answer).slice(0, 160)}\nWhat might this protect or cost? One question, at most 20 words.` },
   ];
   return [
-    { role:'system', content:`あなたはEMBERの${npc.name}。${npc.persona} この選択が守るものと失うかもしれないものを見つめ、その人らしい鋭くやさしい問いを一つだけ返す。60字以内。診断・断定・作り話は禁止。` },
-    { role:'user', content:`場面：${sceneName}\n回答：${String(answer).slice(0, 220)}\nこの選択をした旅人に、考え続けたくなる問いを一つ。` },
+    { role:'system', content:`あなたは${npc.name}。${npc.persona} 選択の代償に触れる鋭くやさしい問いを日本語で一つ。40字以内。診断・作り話は禁止。` },
+    { role:'user', content:`場面：${sceneName}\n回答：${String(answer).slice(0, 160)}\n何を守り、何を失う？問いを一つ。` },
   ];
 }
 

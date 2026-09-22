@@ -406,7 +406,7 @@ function deliverAmbient() {
     $('#speechBalloon').hidden = true;
     updateNpcModel();
   }, 300000);
-  worker.postMessage({ type: 'generate', id: chatReqId, max_new_tokens: 48, messages: buildCommentPrompt({
+  worker.postMessage({ type: 'generate', id: chatReqId, max_new_tokens: 24, messages: buildCommentPrompt({
     npc: characters[p.npcIdx], sceneName: p.sceneName, answer: p.say, lang,
   }) });
 }
@@ -427,11 +427,10 @@ function showNpcComment(answerLabel, reason, done) {
     chatTimer = setTimeout(() => {
       if (!commentMode) return;
       setBalloon(who, m('LFMの生成が時間切れになりました。後でコメントを届けます。', 'LFM is taking longer. I will bring the comment when it is ready.'));
-      commentTimer = setTimeout(finishComment, 2200);
-    }, 15000);
-    // Keep the journey moving while each token appears in the balloon and journal.
-    if (!state.completed) commentTimer = setTimeout(finishComment, 1200);
-    worker.postMessage({ type: 'generate', id: chatReqId, max_new_tokens: 48, messages: buildCommentPrompt({
+      finishComment();
+    }, 8000);
+    // Show the first generated words before advancing; keep streaming afterward.
+    worker.postMessage({ type: 'generate', id: chatReqId, max_new_tokens: 24, messages: buildCommentPrompt({
       npc: c, sceneName: questions[state.index].name, answer: say, lang,
     }) });
   } else if (modelState === 'loading' || (modelState === 'ready' && worker && (generating || chatBusy))) {
@@ -517,6 +516,10 @@ function createModelWorker() {
     if (data.id != null && chatBusy && data.id === chatReqId) {
       if (data.type === 'token') {
         chatDraft += data.text;
+        if (commentMode && !commentTimer && chatDraft.trim()) {
+          clearTimeout(chatTimer);
+          commentTimer = setTimeout(finishComment, 2500);
+        }
         if ((commentMode || ambientMode) && activeCommentIndex >= 0) {
           if (chatDraft === data.text) $('#commentJournal').open = true;
           renderCommentJournal(activeCommentIndex, chatDraft);
