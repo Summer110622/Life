@@ -17,15 +17,15 @@
   <div class="app-shell">
     <header class="topbar">
       <div class="brand"><span class="brand-mark">◆</span><span>EMBER</span><small>深層性格診断</small></div>
-      <div class="top-actions"><button class="sound-btn" id="soundBtn" type="button" aria-label="BGMを再生" aria-pressed="false">♪ BGM OFF</button><button class="ghost-btn" id="cpuBtn" type="button" hidden>CPUで実行（低速）</button><button class="ghost-btn" id="cancelModelBtn" type="button" hidden>AI処理を停止</button><span class="save-status" id="lfmStatus" role="status">LFM / 未読込</span></div>
+      <div class="top-actions"><button class="sound-btn lang-btn" id="langBtn" type="button" aria-label="Switch language">EN</button><button class="sound-btn" id="soundBtn" type="button" aria-label="BGMを再生" aria-pressed="false">♪ BGM OFF</button><button class="ghost-btn" id="cpuBtn" type="button" hidden>CPUで実行（低速）</button><button class="ghost-btn" id="cancelModelBtn" type="button" hidden>AI処理を停止</button><span class="save-status" id="lfmStatus" role="status">LFM / 未読込</span></div>
     </header>
 
     <main>
       <section class="hero screen active" id="introScreen" aria-labelledby="introTitle">
-        <div class="sys-hud fixed"><button type="button" id="titleSoundBtn" aria-label="BGMの再生・停止">♪</button></div>
+        <div class="sys-hud fixed"><button type="button" id="titleSoundBtn" aria-label="BGMの再生・停止">♪</button><button type="button" class="lang-btn" id="titleLangBtn" aria-label="Switch language">EN</button></div>
         <div class="hero-copy">
           <p class="eyebrow">LIQUID AI / LFM2 × WEBGPU</p>
-          <h1 id="introTitle">あなたが選ばなかった<br><em>道</em>を、診断する。</h1>
+          <h1 id="introTitle">選ばなかった道も、<br><em>あなた</em>をつくる。</h1>
           <p id="titleQuote" class="title-quote"></p>
           <p class="lede">記憶を失ったロボット「トワ」と、夕暮れの町へ。18の場面で選ぶ言葉が、あなただけの旅になる。最後にLFMが、あなたの選択から一通の手紙を書きます。</p>
           <div class="hero-meta"><span>18 SCENES</span><span>ON-DEVICE AI</span><span>約 10–20 分</span></div>
@@ -46,12 +46,13 @@
       </section>
 
       <section class="play-screen screen" id="playScreen" aria-labelledby="questionTitle">
+        <details class="comment-journal" id="commentJournal"><summary id="commentJournalTitle">LFMの言葉 (0)</summary><ol id="commentJournalList"></ol></details>
         <div class="play-scene">
           <div class="walk-wrap">
             <div class="map-hud-top"><span id="sceneNo">SCENE 01</span><span id="sceneName">入口 / THE GATE</span><span id="speaker">トワ / 記憶のない歩行者</span></div>
             <canvas id="walkCanvas" width="960" height="540" aria-label="歩き回れるマップ。WASD・矢印キーで移動、Eキーで話す"></canvas>
             <button type="button" class="fs-btn" id="fsBtn" aria-label="全画面切り替え">⛶ 全画面</button>
-            <div class="sys-hud"><button type="button" id="gameSoundBtn" aria-label="BGMの再生・停止">♪</button><span id="walkStatus" role="status">LFM / 未読込</span></div>
+            <div class="sys-hud"><button type="button" id="gameSoundBtn" aria-label="BGMの再生・停止">♪</button><button type="button" class="lang-btn" id="gameLangBtn" aria-label="Switch language">EN</button><button type="button" class="cpu-game-btn" id="gameRetryBtn" hidden>LFM再試行</button><button type="button" class="cpu-game-btn" id="gameCpuBtn" hidden>CPU</button><span id="walkStatus" role="status">LFM / 未読込</span></div>
             <div id="speechBalloon" hidden><b id="balloonName"></b><span id="balloonText"></span></div>
             <button type="button" id="npcBtn" hidden>話しかける T</button>
             <div id="npcCard" hidden>

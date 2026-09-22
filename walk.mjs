@@ -165,7 +165,8 @@ export function createWalk(canvas, opts = {}) {
 
     const ms = markers();
     const near = nearestActive();
-    prompt = near ? 'T / E で話す' : (activeSlot >= 0 ? '◆ を目指して歩こう（WASD / 十字キー）' : '');
+    prompt = near ? (opts.lang === 'en' ? 'Talk with T / E' : 'T / E で話す')
+      : (activeSlot >= 0 ? (opts.lang === 'en' ? 'Walk to ◆ (WASD / arrows)' : '◆ を目指して歩こう（WASD / 十字キー）') : '');
 
     // NPCのHUD通知（吹き出し配置・話しかけ可否用。5フレームに1回）
     {

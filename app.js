@@ -1,8 +1,18 @@
-import { questions, characters, factorNames, archetypes, sceneEpigraphs, archePhil } from './story.mjs';
-import { summarize, makeTranscript, buildPrompt, buildNpcPrompt, loadSave } from './game-core.mjs';
+import { questions as jaQuestions, characters as jaCharacters, factorNames as jaFactorNames, archetypes as jaArchetypes, sceneEpigraphs as jaEpigraphs, archePhil as jaArchePhil } from './story.mjs';
+import { enQuestions, enCharacters, enFactorNames, enArchetypes, enEpigraphs, enArchePhil, commentSpeaker } from './i18n.mjs';
+import { summarize, makeTranscript, buildPrompt, buildNpcPrompt, buildCommentPrompt, loadSave } from './game-core.mjs';
 import { createWalk, sceneOf, slotOf, npcCharOf } from './walk.mjs';
 
 const $ = s => document.querySelector(s);
+const lang = localStorageSafeGet('ember-lang') === 'en' ? 'en' : 'ja';
+const english = lang === 'en';
+const m = (ja, en) => english ? en : ja;
+const questions = english ? enQuestions : jaQuestions;
+const characters = english ? enCharacters : jaCharacters;
+const factorNames = english ? enFactorNames : jaFactorNames;
+const archetypes = english ? enArchetypes : jaArchetypes;
+const sceneEpigraphs = english ? enEpigraphs : jaEpigraphs;
+const archePhil = english ? enArchePhil : jaArchePhil;
 const SAVE_KEY = 'ember-life-v2';
 let state = loadSave(localStorageSafeGet(SAVE_KEY), questions);
 let screen = 'intro', busy = false, frameTimer = null, transitionTimer = null, frame = 0;
@@ -18,9 +28,9 @@ let walk = null, dialogueOpen = false, walkScene = -1;
 let npcOpen = false, chatBusy = false, chatReqId = 0, chatTimer = null, chatDraft = '';
 let npcLog = [], npcVisits = {}, lastHud = null;
 // 回答へのAIコメント（NPCが問い→回答→寸評の進行フロー用）
-let commentMode = false, commentCallback = null, commentTimer = null, ackVisits = {};
+let commentMode = false, commentGenerating = false, activeCommentIndex = -1, commentCallback = null, commentTimer = null, ackVisits = {};
 // LFM準備中の回答は保留し、READYになり次第その場で寸評を届ける
-let pendingComment = null, ambientMode = false, ambientTimer = null, ambientName = '';
+let pendingComments = [], ambientMode = false, ambientTimer = null, ambientName = '';
 let typeTimer = null;
 function stopType() { clearTimeout(typeTimer); typeTimer = null; }
 function typewrite(el, text) {
@@ -49,9 +59,67 @@ const audio = $('#bgm');
 audio.volume = 0.28;
 
 function localStorageSafeGet(key) { try { return localStorage.getItem(key); } catch { return null; } }
+function renderCommentJournal(draftIndex = -1, draft = '') {
+  const list = $('#commentJournalList');
+  if (!list) return;
+  list.replaceChildren();
+  const count = state.answers.reduce((n, _, i) => n + (state.comments?.[i] ? 1 : 0), 0);
+  $('#commentJournalTitle').textContent = m(`LFMの言葉 ${count}/${state.answers.length}`, `LFM reflections ${count}/${state.answers.length}`);
+  state.answers.forEach((_, i) => {
+    const li = document.createElement('li');
+    const title = document.createElement('b'); title.textContent = `${i + 1}. ${questions[i].kicker}`;
+    const body = document.createElement('span');
+    body.textContent = state.comments?.[i] || (i === draftIndex && draft ? draft + ' ▌' : m('生成待ち', 'Waiting for LFM'));
+    li.append(title, body); list.append(li);
+  });
+}
+function applyLanguage() {
+  document.documentElement.lang = lang;
+  ['langBtn', 'titleLangBtn', 'gameLangBtn'].forEach(id => { $('#' + id).textContent = english ? '日本語' : 'EN'; });
+  const switchLanguage = () => {
+    try {
+      localStorage.setItem('ember-lang', english ? 'ja' : 'en');
+      const saved = JSON.parse(localStorageSafeGet(SAVE_KEY) || 'null');
+      if (saved) { saved.report = ''; saved.comments = []; localStorage.setItem(SAVE_KEY, JSON.stringify(saved)); }
+    } catch {}
+    location.reload();
+  };
+  ['langBtn', 'titleLangBtn', 'gameLangBtn'].forEach(id => { $('#' + id).onclick = switchLanguage; });
+  if (!english) return;
+  document.title = 'EMBER / A Journey of Choices';
+  $('#introTitle').innerHTML = 'The roads you did not take<br><em>still shape you.</em>';
+  const copy = [
+    ['.brand small', 'A JOURNEY OF CHOICES'],
+    ['#introScreen .lede', 'Walk through a town at dusk with Towa, a robot who has lost its memory. Eighteen choices make a path only you can walk. At the end, LFM writes a letter grounded in the choices you made.'],
+    ['#startAiBtn', 'Begin the journey →'], ['#resumeBtn', 'Continue'],
+    ['#introScreen .hero-meta span:last-child', 'ABOUT 10–20 MIN'],
+    ['#introScreen .hero-caption b', 'Towa — the walker without memories'],
+    ['#cpuBtn', 'Use CPU (slow)'], ['#cancelModelBtn', 'Stop AI'], ['#modelRetry', 'Retry LFM'], ['#gameRetryBtn', 'Retry LFM'], ['#startForceBtn', 'Continue without AI'],
+    ['#fsBtn', '⛶ Full screen'], ['#npcBtn', 'Talk T'], ['#npcClose', 'Leave ✕'], ['#npcSend', 'Send'], ['#npcNudge', 'One more thought'], ['#npcLoad', 'Load LFM'], ['#talkBtn', 'Talk E'],
+    ['.reason-label', 'Before choosing, leave a reason (optional, 240 characters)'], ['#backBtn', '← Back'],
+    ['#restartBtn', 'Return to the beginning ↻'], ['#letterTitle', 'A letter from Towa to you.'], ['#generateBtn', 'Read more deeply with LFM →'],
+    ['.ai-letter > .hint:last-child', 'The first use downloads the model. This is a reflection, not a personality measurement.'],
+    ['.factor-card .card-head span', 'Patterns in your choices'], ['.factor-card > .hint:last-child', 'These are game indicators, not LFM inferences or psychological test scores.'],
+    ['.memo-card .card-head span:first-child', 'A NOTE RECOVERED'], ['.memo-sign', '— EMBER / space between steps'],
+    ['.journey-log summary', 'Look back at your choices'], ['#exportBtn', 'Save your journey'], ['#eraseBtn', 'Delete answers on this device'],
+    ['.footer span:last-child', 'Answers are stored only on this device'],
+  ];
+  copy.forEach(([selector, value]) => { const el = $(selector); if (el) el.textContent = value; });
+  const hints = document.querySelectorAll('#introScreen .hint');
+  if (hints[0]) hints[0].textContent = 'The journey begins at once. LFM loads in the background and will respond when ready. The first download may take several minutes. Generation stays on your device; your answers are not sent away. Music starts with the journey and can be turned off.';
+  if (hints[1]) hints[1].textContent = 'A work for reflection and play, not a medical or psychological diagnosis.';
+  $('#npcInput').placeholder = 'Say something to this character…';
+  $('#reason').placeholder = 'The same choice can have a different reason.';
+  $('#saveMessage').textContent = 'Saved on this device / keys 1–4 also choose';
+  $('#walkCanvas').setAttribute('aria-label', 'Walkable map. Move with WASD or arrow keys; talk with E.');
+  $('#titleSoundBtn').setAttribute('aria-label', 'Toggle music');
+  $('#gameSoundBtn').setAttribute('aria-label', 'Toggle music');
+}
+applyLanguage();
 function save() {
-  try { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); $('#saveMessage').textContent = 'この端末に自動保存'; }
-  catch { $('#saveMessage').textContent = '保存できません。このタブで続行できます'; }
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); $('#saveMessage').textContent = english ? 'Saved on this device' : 'この端末に自動保存'; }
+  catch { $('#saveMessage').textContent = english ? 'Could not save; you can keep playing in this tab.' : '保存できません。このタブで続行できます'; }
+  renderCommentJournal();
 }
 function show(name) {
   screen = name;
@@ -69,6 +137,7 @@ function stopAnimation() { clearTimeout(frameTimer); frameTimer = null; }
 function ensureWalk() {
   if (walk || !$('#walkCanvas')) return;
   walk = createWalk($('#walkCanvas'), {
+    lang,
     onInteract: qi => { if (qi === state.index && !dialogueOpen && !npcOpen && !commentMode && screen === 'play') openDialogue(); },
     onTalkNpc: () => { if (screen === 'play' && !dialogueOpen && !npcOpen && !commentMode && lastHud && lastHud.near) openNpcCard(); },
     onHud: h => { lastHud = h; updateNpcHud(); },
@@ -141,10 +210,10 @@ function updateNpcModel() {
   const load = $('#npcLoad'), send = $('#npcSend'), nudge = $('#npcNudge');
   if (modelState === 'ready') {
     if (load) load.hidden = true;
-    setNpcStatus(chatBusy ? 'LFM生成中…' : generating ? '手紙を生成中…' : 'LFM READY・随時生成');
+    setNpcStatus(chatBusy ? m('LFM生成中…', 'LFM is writing…') : generating ? m('手紙を生成中…', 'Writing the letter…') : m('LFM READY・随時生成', 'LFM READY · live responses'));
   } else {
-    if (load) { load.hidden = modelState === 'loading'; load.textContent = modelState === 'loading' ? 'LFM読込中…' : 'LFMを読み込む'; }
-    if (modelState !== 'loading') setNpcStatus('LFM未読込・定型文で応答');
+    if (load) { load.hidden = modelState === 'loading'; load.textContent = modelState === 'loading' ? m('LFM読込中…', 'Loading LFM…') : m('LFMを読み込む', 'Load LFM'); }
+    if (modelState !== 'loading') setNpcStatus(m('LFM未読込・定型文で応答', 'LFM unavailable · story dialogue only'));
   }
   const lock = chatBusy || generating;
   if (send) send.disabled = lock;
@@ -157,7 +226,7 @@ function renderNpc() {
     npcLog.slice(-20).forEach(m => {
       const div = document.createElement('div');
       div.className = 'npc-line ' + (m.who === 'you' ? 'you' : 'npc');
-      div.textContent = (m.who === 'you' ? 'トワ：' : '') + m.text;
+      div.textContent = (m.who === 'you' ? characters[0].name + ': ' : '') + m.text;
       log.append(div);
     });
     if (chatBusy && chatDraft) {
@@ -195,9 +264,9 @@ function setBalloon(name, text) {
 function updateNpcHud() {
   const balloon = $('#speechBalloon'), btn = $('#npcBtn');
   if (!balloon || !btn) return;
-  if (pendingComment) deliverAmbient(); // READY後の届け損ねを歩行中に再試行
+  if (pendingComments.length) deliverAmbient(); // READY後の届け損ねを歩行中に再試行
   if (!lastHud || !lastHud.has || screen !== 'play' || state.completed) {
-    if (!npcOpen && !commentMode) balloon.hidden = true;
+    if (!npcOpen && !commentMode && !ambientMode) balloon.hidden = true;
     btn.hidden = true;
     return;
   }
@@ -205,17 +274,18 @@ function updateNpcHud() {
   const r = canvas.getBoundingClientRect(), wrap = canvas.parentElement.getBoundingClientRect();
   const x = (r.left - wrap.left) + lastHud.fx * r.width;
   const y = (r.top - wrap.top) + lastHud.fy * r.height;
-  balloon.style.left = Math.max(70, Math.min(wrap.width - 70, x)) + 'px';
+  const edge = Math.min(210, wrap.width * 0.42);
+  balloon.style.left = Math.max(edge, Math.min(wrap.width - edge, x)) + 'px';
   balloon.style.top = Math.max(48, y) + 'px';
-  if (commentMode) { balloon.hidden = false; btn.hidden = true; return; }
+  if (commentMode || ambientMode) { balloon.hidden = false; btn.hidden = true; return; }
   if (npcOpen) { balloon.hidden = false; return; }
   btn.hidden = !lastHud.near || dialogueOpen;
   if (lastHud.near && !dialogueOpen) {
     const c = curNpc();
     const q = questions[state.index];
     balloon.hidden = false;
-    $('#balloonName').textContent = c ? c.name : 'トワ';
-    $('#balloonText').textContent = state.answers[state.index] === undefined && q ? '「' + q.kicker + '」の話 ［T/E］' : '［T］話しかける';
+    $('#balloonName').textContent = c ? c.name : characters[0].name;
+    $('#balloonText').textContent = state.answers[state.index] === undefined && q ? m('「' + q.kicker + '」の話 ［T/E］', 'Talk about ' + q.kicker + ' [T/E]') : m('［T］話しかける', '[T] Talk');
   } else balloon.hidden = true;
 }
 function openNpcCard() {
@@ -250,18 +320,19 @@ function npcGenerate(playerText) {
   const c = curNpc();
   if (!c) return false;
   chatBusy = true; chatReqId = ++requestId; chatDraft = '';
+  activeCommentIndex = -1;
   renderNpc(); updateNpcModel();
   clearTimeout(chatTimer);
   chatTimer = setTimeout(() => {
     if (!chatBusy) return;
     chatBusy = false; requestId++;
-    setNpcStatus('生成が時間切れになりました。定型文で続けます。');
+    setNpcStatus(m('生成が時間切れになりました。定型文で続けます。', 'Generation timed out. The story continues.'));
     renderNpc(); updateNpcModel();
   }, 120000);
-  worker.postMessage({ type: 'generate', id: chatReqId, messages: buildNpcPrompt({
+  worker.postMessage({ type: 'generate', id: chatReqId, max_new_tokens: 128, messages: buildNpcPrompt({
     npc: c, sceneName: questions[state.index].name,
     answered: state.answers.length, total: questions.length,
-    transcript: makeTranscript(state, questions),
+    transcript: makeTranscript(state, questions, lang), lang,
     history: npcLog.slice(-6), playerText,
   }) });
   return true;
@@ -276,30 +347,56 @@ function pickAck(c) {
 }
 function finishComment() {
   if (!commentMode) return;
-  commentMode = false; chatBusy = false;
+  const stillGenerating = commentGenerating && chatBusy;
+  commentMode = false;
+  commentGenerating = false;
+  if (stillGenerating) {
+    ambientMode = true;
+    ambientName = curNpc()?.name || characters[0].name;
+    clearTimeout(ambientTimer);
+    ambientTimer = setTimeout(() => {
+      ambientMode = false; chatBusy = false; requestId++;
+      $('#speechBalloon').hidden = true;
+      deliverAmbient();
+    }, 300000);
+  }
   clearTimeout(commentTimer); clearTimeout(chatTimer);
   const done = commentCallback;
   commentCallback = null;
   $('#speechBalloon').hidden = true;
   if (done) done();
+  if (!stillGenerating) deliverAmbient();
 }
 function abortComment() {
-  commentCallback = null; commentMode = false; chatBusy = false;
+  commentCallback = null; commentMode = false; commentGenerating = false; chatBusy = false;
   clearTimeout(commentTimer); clearTimeout(chatTimer);
   const b = $('#speechBalloon'); if (b) b.hidden = true;
 }
 function clearAmbient() {
-  pendingComment = null; ambientMode = false; ambientName = '';
+  pendingComments = []; ambientMode = false; ambientName = '';
   clearTimeout(ambientTimer);
+}
+function queueMissingComments() {
+  if (state.completed) return;
+  state.answers.forEach((key, index) => {
+    if (state.comments?.[index] || pendingComments.some(p => p.index === index)) return;
+    const c = commentSpeaker(index, characters);
+    const answer = questions[index].answers.find(a => a[0] === key)?.[1];
+    if (!answer) return;
+    const reason = state.reasons[index];
+    const say = m('選択：', 'Choice: ') + answer + (reason ? m('（理由：', ' (Reason: ') + reason + m('）', ')') : '');
+    pendingComments.push({ index, npcIdx:c.idx, name:c.name, sceneName:questions[index].name, say });
+  });
 }
 // 保留していた回答への寸評を、その場で届ける（進行は止めない）
 function deliverAmbient() {
-  const p = pendingComment;
-  if (!p || screen !== 'play' || dialogueOpen || npcOpen || commentMode) return;
+  const p = pendingComments[0];
+  if (!p || screen !== 'play' || dialogueOpen || npcOpen || commentMode || ambientMode) return;
   if (modelState !== 'ready' || generating || chatBusy || !worker) return;
-  pendingComment = null;
+  pendingComments.shift();
   ambientMode = true; ambientName = p.name;
   chatBusy = true; chatReqId = ++requestId; chatDraft = '';
+  activeCommentIndex = p.index;
   setBalloon(p.name, '…');
   updateNpcModel();
   clearTimeout(ambientTimer);
@@ -307,49 +404,46 @@ function deliverAmbient() {
     ambientMode = false; chatBusy = false; requestId++;
     $('#speechBalloon').hidden = true;
     updateNpcModel();
-  }, 25000);
-  worker.postMessage({ type: 'generate', id: chatReqId, messages: buildNpcPrompt({
-    npc: { idx: p.npcIdx, ...characters[p.npcIdx] }, sceneName: p.sceneName,
-    answered: p.answered, total: questions.length,
-    transcript: p.transcript, history: p.history, playerText: null, answer: p.say,
+  }, 300000);
+  worker.postMessage({ type: 'generate', id: chatReqId, max_new_tokens: 48, messages: buildCommentPrompt({
+    npc: characters[p.npcIdx], sceneName: p.sceneName, answer: p.say, lang,
   }) });
 }
 function showNpcComment(answerLabel, reason, done) {
-  const c = curNpc();
-  const who = c ? c.name : 'トワ';
-  const say = '選択：' + answerLabel + (reason ? '（理由：' + reason + '）' : '');
+  const c = commentSpeaker(state.index, characters);
+  const who = c ? c.name : characters[0].name;
+  const say = m('選択：', 'Choice: ') + answerLabel + (reason ? m('（理由：', ' (Reason: ') + reason + m('）', ')') : '');
   commentMode = true; commentCallback = done;
+  commentGenerating = false;
   if (walk) walk.setPaused(true);
   const canAi = c && worker && !generating && !chatBusy;
   if (canAi && modelState === 'ready') {
+    commentGenerating = true;
     chatBusy = true; chatReqId = ++requestId; chatDraft = '';
+    activeCommentIndex = state.index;
     setBalloon(who, '…');
     clearTimeout(chatTimer); clearTimeout(commentTimer);
     chatTimer = setTimeout(() => {
       if (!commentMode) return;
-      setBalloon(who, 'LFMの生成が時間切れになりました。次の回答で再試行します');
+      setBalloon(who, m('LFMの生成が時間切れになりました。後でコメントを届けます。', 'LFM is taking longer. I will bring the comment when it is ready.'));
       commentTimer = setTimeout(finishComment, 2200);
     }, 15000);
-    worker.postMessage({ type: 'generate', id: chatReqId, messages: buildNpcPrompt({
-      npc: c, sceneName: questions[state.index].name,
-      answered: state.answers.length, total: questions.length,
-      transcript: makeTranscript(state, questions),
-      history: npcLog.slice(-6), playerText: null, answer: say,
+    worker.postMessage({ type: 'generate', id: chatReqId, max_new_tokens: 48, messages: buildCommentPrompt({
+      npc: c, sceneName: questions[state.index].name, answer: say, lang,
     }) });
-  } else if (canAi && modelState === 'loading') {
+  } else if (modelState === 'loading' || (modelState === 'ready' && worker && (generating || chatBusy))) {
     // 準備中の回答は保留：READYになり次第、その場で寸評を届ける
-    pendingComment = {
-      npcIdx: c.idx, name: who, sceneName: questions[state.index].name,
-      answered: state.answers.length, transcript: makeTranscript(state, questions),
-      history: npcLog.slice(-6), say,
-    };
-    setBalloon(who, 'LFM準備中…言葉を用意しています');
+    pendingComments.push({
+      index: state.index, npcIdx: c.idx, name: who, sceneName: questions[state.index].name,
+      say,
+    });
+    setBalloon(who, m('LFM準備中…この回答への言葉を後で届けます', 'LFM is loading. I will bring a comment on this choice later.'));
     clearTimeout(commentTimer);
     commentTimer = setTimeout(finishComment, 4000);
   } else {
     // 定型相づちは使わない。LFM不可の理由を示して進む
     if (modelState === 'idle' || modelState === 'loading') loadModel();
-    setBalloon(who, 'LFMが使えません（' + (lastModelError || 'WebGPU対応端末でお試しください') + '）。NPCカードの[LFMを読み込む]で再試行できます');
+    setBalloon(who, m('LFMが使えません（', 'LFM is unavailable (') + (lastModelError || m('WebGPU対応端末でお試しください', 'Try a WebGPU browser or the CPU option')) + m('）。画面上部のCPUボタンで再試行できます', '). Use the CPU button above to try again.'));
     clearTimeout(commentTimer);
     commentTimer = setTimeout(finishComment, 3500);
   }
@@ -371,7 +465,7 @@ document.addEventListener('visibilitychange', () => {
 function syncSound() {
   $('#soundBtn').textContent = audio.paused ? '♪ BGM OFF' : '♫ BGM ON';
   $('#soundBtn').setAttribute('aria-pressed', String(!audio.paused));
-  $('#soundBtn').setAttribute('aria-label', audio.paused ? 'BGMを再生' : 'BGMを停止');
+  $('#soundBtn').setAttribute('aria-label', audio.paused ? m('BGMを再生', 'Play music') : m('BGMを停止', 'Stop music'));
   const gs = $('#gameSoundBtn');
   if (gs) { gs.textContent = audio.paused ? '♪' : '♫'; gs.setAttribute('aria-pressed', String(!audio.paused)); }
   const ts = $('#titleSoundBtn');
@@ -379,7 +473,7 @@ function syncSound() {
 }
 async function toggleSound() {
   if (!audio.paused) audio.pause();
-  else try { await audio.play(); } catch { $('#soundBtn').textContent = '音声を再生できません'; return; }
+  else try { await audio.play(); } catch { $('#soundBtn').textContent = m('音声を再生できません', 'Cannot play music'); return; }
   syncSound();
 }
 // 旅の開始と同時に音楽を流す（クリック操作に紐づくため再生制限に掛からない）
@@ -388,7 +482,7 @@ function startBgm() {
   audio.play().then(() => syncSound()).catch(() => {});
 }
 $('#soundBtn').onclick = toggleSound;
-audio.addEventListener('error', () => { $('#soundBtn').textContent = 'BGM 読込エラー'; });
+audio.addEventListener('error', () => { $('#soundBtn').textContent = m('BGM 読込エラー', 'Music failed to load'); });
 
 function disposeWorker() {
   clearTimeout(modelTimer);
@@ -402,16 +496,16 @@ function disposeWorker() {
 function modelFailure(message) {
   disposeWorker(); lastModelError = message; setModelState('error');
   setStatus(message);
-  $('#aiStatus').textContent = message + '。旅は続けられます。LFMが必要な場合は読み込み直してください。';
-  $('#generateBtn').textContent = 'LFMを再読み込みして生成';
+  $('#aiStatus').textContent = message + m('。旅は続けられます。LFMが必要な場合は読み込み直してください。', '. The journey can continue. Retry LFM when you are ready.');
+  $('#generateBtn').textContent = m('LFMを再読み込みして生成', 'Reload LFM and generate');
   $('#startAiBtn').disabled = false;
-  $('#startAiBtn').textContent = '旅をはじめる';
+  $('#startAiBtn').textContent = m('旅をはじめる', 'Begin the journey');
   const retry = $('#modelRetry');
   if (retry) retry.hidden = false;
+  $('#gameRetryBtn').hidden = false;
   const force = $('#startForceBtn');
   if (force) force.hidden = false;
-  const cpu = $('#cpuBtn');
-  if (cpu) cpu.hidden = false;
+  ['cpuBtn', 'gameCpuBtn'].forEach(id => { const cpu = $('#' + id); if (cpu) cpu.hidden = false; });
 }
 function createModelWorker() {
   if (worker) return;
@@ -420,28 +514,36 @@ function createModelWorker() {
     if (data.id != null && chatBusy && data.id === chatReqId) {
       if (data.type === 'token') {
         chatDraft += data.text;
-        if (commentMode) setBalloon(curNpc() ? curNpc().name : 'トワ', chatDraft.slice(0, 140));
-        else if (ambientMode) setBalloon(ambientName || 'トワ', chatDraft.slice(0, 140));
+        if ((commentMode || ambientMode) && activeCommentIndex >= 0) {
+          if (chatDraft === data.text) $('#commentJournal').open = true;
+          renderCommentJournal(activeCommentIndex, chatDraft);
+        }
+        if (commentMode) setBalloon(curNpc() ? curNpc().name : characters[0].name, chatDraft.slice(0, 140));
+        else if (ambientMode) setBalloon(ambientName || characters[0].name, chatDraft.slice(0, 140));
         else renderNpc();
       }
       else if (data.type === 'complete') {
         clearTimeout(chatTimer); chatBusy = false;
+        if ((commentMode || ambientMode) && activeCommentIndex >= 0) {
+          state.comments = state.comments || [];
+          state.comments[activeCommentIndex] = String(data.text || '').slice(0, 500);
+          save();
+        }
         if (commentMode) {
-          setBalloon(curNpc() ? curNpc().name : 'トワ', String(data.text || '……').slice(0, 140));
+          setBalloon(curNpc() ? curNpc().name : characters[0].name, String(data.text || '……').slice(0, 140));
           clearTimeout(commentTimer);
           commentTimer = setTimeout(finishComment, 2400);
           return;
         }
         if (ambientMode) {
-          ambientMode = false;
-          setBalloon(ambientName || 'トワ', String(data.text || '……').slice(0, 140));
+          setBalloon(ambientName || characters[0].name, String(data.text || '……').slice(0, 140));
           clearTimeout(ambientTimer);
-          ambientTimer = setTimeout(() => { $('#speechBalloon').hidden = true; }, 5000);
+          ambientTimer = setTimeout(() => { ambientMode = false; $('#speechBalloon').hidden = true; deliverAmbient(); }, 5000);
           updateNpcModel();
           return;
         }
         npcLog.push({ who: 'npc', text: String(data.text || '……').slice(0, 400) });
-        setNpcStatus('LFM随時生成・仮説としての言葉です');
+        setNpcStatus(m('LFM随時生成・仮説としての言葉です', 'LFM response · one possible reading'));
         renderNpc(); updateNpcModel();
       }
       else if (data.type === 'error') {
@@ -450,16 +552,17 @@ function createModelWorker() {
           ambientMode = false;
           $('#speechBalloon').hidden = true;
           updateNpcModel();
+          deliverAmbient();
           return;
         }
         if (commentMode) {
           const c = curNpc();
-          setBalloon(c ? c.name : 'トワ', 'LFM生成に失敗しました。次の回答で再試行します');
+          setBalloon(c ? c.name : characters[0].name, m('LFM生成に失敗しました。次の回答で再試行します', 'LFM could not finish this comment. I will try again next time.'));
           clearTimeout(commentTimer);
           commentTimer = setTimeout(finishComment, 2200);
           return;
         }
-        setNpcStatus('生成できませんでした。定型文で続けます。');
+        setNpcStatus(m('生成できませんでした。定型文で続けます。', 'Generation failed. The story continues.'));
         renderNpc(); updateNpcModel();
       }
       return;
@@ -471,18 +574,18 @@ function createModelWorker() {
       const pct = data.progress == null ? null : Math.round(data.progress);
       const sec = Math.max(0, Math.floor((Date.now() - loadStart) / 1000));
       const clock = Math.floor(sec / 60) + ':' + String(sec % 60).padStart(2, '0');
-      setStatus('LFM 読込中 · ' + mb + ' MB' + (pct == null ? '' : ' / ' + pct + '%') + ' · ' + clock);
+      setStatus(m('LFM 読込中 · ', 'LFM loading · ') + mb + ' MB' + (pct == null ? '' : ' / ' + pct + '%') + ' · ' + clock);
       $('#aiStatus').textContent = $('#modelMessage').textContent;
-      if (modelState === 'loading') $('#startAiBtn').textContent = 'LFM読込中' + (pct == null ? '…' : ' ' + pct + '%');
+      if (modelState === 'loading') $('#startAiBtn').textContent = m('LFM読込中', 'LFM loading') + (pct == null ? '…' : ' ' + pct + '%');
     }
     if (data.type === 'ready') {
       clearTimeout(modelTimer); setModelState('ready');
-      ['modelRetry', 'startForceBtn', 'cpuBtn'].forEach(id => { const el = document.getElementById(id); if (el) el.hidden = true; });
-      setStatus(cpuMode ? 'LFM2-350M · CPU READY（低速）' : 'LFM2-350M · WebGPU READY');
+      ['modelRetry', 'gameRetryBtn', 'startForceBtn', 'cpuBtn', 'gameCpuBtn'].forEach(id => { const el = document.getElementById(id); if (el) el.hidden = true; });
+      setStatus(cpuMode ? m('LFM2-350M · CPU READY（低速）', 'LFM2-350M · CPU READY (slow)') : 'LFM2-350M · WebGPU READY');
       $('#cancelModelBtn').hidden = true;
       $('#startAiBtn').disabled = false;
-      $('#startAiBtn').textContent = '旅をはじめる';
-      $('#aiStatus').textContent = 'LFMの準備ができました。回答をもとに手紙を生成できます。';
+      $('#startAiBtn').textContent = m('旅をはじめる', 'Begin the journey');
+      $('#aiStatus').textContent = m('LFMの準備ができました。回答をもとに手紙を生成できます。', 'LFM is ready to respond to your choices.');
       updateNpcModel();
       if (npcOpen && !chatBusy && !generating) npcGenerate(null);
       deliverAmbient();
@@ -495,31 +598,31 @@ function createModelWorker() {
     if (data.type === 'complete') {
       clearTimeout(modelTimer); generating = false; hasSavedReport = true;
       report = data.text; $('#aiOutput').textContent = report;
-      $('#aiStatus').textContent = 'LFM2-350M / WebGPUで生成しました。AIの読み取りは仮説です。';
-      $('#generateBtn').disabled = false; $('#generateBtn').textContent = 'もう一度読み解く';
+      $('#aiStatus').textContent = m('LFM2-350Mで生成しました。AIの読み取りは仮説です。', 'Generated with LFM2-350M. This is one possible reading.');
+      $('#generateBtn').disabled = false; $('#generateBtn').textContent = m('もう一度読み解く', 'Read again');
       $('#cancelModelBtn').hidden = true;
       state.report = report; save();
       $('#aiOutput').setAttribute('aria-busy', 'false');
     }
     if (data.type === 'error') { modelFailure(data.message); updateNpcModel(); }
   };
-  worker.onerror = e => { e.preventDefault(); modelFailure('LFMの起動に失敗しました。通信・WebGPU対応をご確認ください'); };
+  worker.onerror = e => { e.preventDefault(); modelFailure(m('LFMの起動に失敗しました。通信・WebGPU対応をご確認ください', 'LFM could not start. Check the connection and WebGPU support.')); };
 }
 async function loadModel(want = 'webgpu') {
   if (modelState === 'ready') return true;
   if (modelState === 'loading') return false;
   cpuMode = want === 'wasm';
   setModelState('loading');
-  ['modelRetry', 'startForceBtn', 'cpuBtn'].forEach(id => { const el = document.getElementById(id); if (el) el.hidden = true; });
+  ['modelRetry', 'gameRetryBtn', 'startForceBtn', 'cpuBtn', 'gameCpuBtn'].forEach(id => { const el = document.getElementById(id); if (el) el.hidden = true; });
   $('#startAiBtn').disabled = true; $('#cancelModelBtn').hidden = false;
-  setStatus(cpuMode ? 'CPUモードで確認中（低速）' : 'WebGPUを確認しています');
+  setStatus(cpuMode ? m('CPUモードで確認中（低速）', 'Checking CPU mode (slow)') : m('WebGPUを確認しています', 'Checking WebGPU'));
   if (!isSecureContext) {
-    modelFailure('HTTPSまたはlocalhostの環境でお試しください');
+    modelFailure(m('HTTPSまたはlocalhostの環境でお試しください', 'Open this site over HTTPS or localhost.'));
     return false;
   }
   if (want === 'webgpu' && !navigator.gpu) {
     const extra = await gpuMissingAdvice();
-    modelFailure('この環境ではWebGPUが利用できません。' + extra);
+    modelFailure(m('この環境ではWebGPUが利用できません。', 'WebGPU is unavailable here. ') + extra);
     return false;
   }
   try {
@@ -529,23 +632,24 @@ async function loadModel(want = 'webgpu') {
     }
     createModelWorker();
     loadStart = Date.now();
-    modelTimer = setTimeout(() => modelFailure('読み込みが時間上限(30分)に達しました。通信を確認して再試行してください'), 1800000);
-    worker.postMessage({ type:'load', device: want });
+    modelTimer = setTimeout(() => modelFailure(m('読み込みが時間上限(30分)に達しました。通信を確認して再試行してください', 'Loading exceeded 30 minutes. Check the connection and retry.')), 1800000);
+    worker.postMessage({ type:'load', device: want, lang });
     return true;
-  } catch { modelFailure(cpuMode ? 'CPUモードを開始できませんでした' : 'GPUを取得できません。対応端末でお試しください'); return false; }
+  } catch { modelFailure(cpuMode ? m('CPUモードを開始できませんでした', 'CPU mode could not start') : m('GPUを取得できません。対応端末でお試しください', 'No GPU adapter is available. Try CPU mode.')); return false; }
 }
 $('#cancelModelBtn').onclick = () => {
   requestId++; disposeWorker(); setModelState('idle');
   clearTimeout(chatTimer); chatBusy = false; chatDraft = ''; abortComment(); clearAmbient();
-  setStatus('LFMを停止しました');
+  setStatus(m('LFMを停止しました', 'LFM stopped'));
   $('#startAiBtn').disabled = false;
-  $('#startAiBtn').textContent = '旅をはじめる';
-  if (!hasSavedReport) { report = ''; $('#aiOutput').textContent = '生成は完了していません。'; }
-  $('#aiStatus').textContent = 'AI処理を停止しました。再読み込みできます。';
+  $('#startAiBtn').textContent = m('旅をはじめる', 'Begin the journey');
+  if (!hasSavedReport) { report = ''; $('#aiOutput').textContent = m('生成は完了していません。', 'Generation did not finish.'); }
+  $('#aiStatus').textContent = m('AI処理を停止しました。再読み込みできます。', 'AI stopped. You can load it again.');
   updateNpcModel(); renderNpc();
 };
 const modelRetryBtn = $('#modelRetry');
 if (modelRetryBtn) modelRetryBtn.onclick = () => { loadModel(); };
+$('#gameRetryBtn').onclick = () => { void loadModel(); };
 const startForceBtn = $('#startForceBtn');
 if (startForceBtn) startForceBtn.onclick = () => { startNew(); };
 const cpuBtn = $('#cpuBtn');
@@ -553,9 +657,10 @@ if (cpuBtn) cpuBtn.onclick = async () => {
   if (screen === 'intro') startNew();
   void loadModel('wasm');
 };
+$('#gameCpuBtn').onclick = () => cpuBtn?.click();
 function startNew() {
   clearTimeout(transitionTimer); busy = false; stopType(); closeNpc(); abortComment();
-  state = { version:2, index:0, answers:[], reasons:[], completed:false, report:'' };
+  state = { version:2, index:0, answers:[], reasons:[], comments:[], completed:false, report:'' };
   report = ''; hasSavedReport = false; save(); show('play');
   if (walk) { walk.destroy(); walk = null; }
   walkScene = -1; dialogueOpen = false;
@@ -611,6 +716,10 @@ function choose(key) {
   state.reasons[state.index] = $('#reason').value.trim().slice(0, 240);
   state.answers.length = state.index + 1;
   state.reasons.length = state.index + 1;
+  state.comments = state.comments || [];
+  state.comments.length = state.index + 1;
+  state.comments[state.index] = '';
+  pendingComments = pendingComments.filter(p => p.index < state.index);
   $('#backBtn').disabled = true;
   document.querySelectorAll('.answer-btn').forEach(b => { b.disabled = true; b.classList.toggle('chosen', b.firstChild.textContent === key); });
   transitionTimer = setTimeout(() => {
@@ -648,10 +757,12 @@ function renderResult() {
   if (walk) walk.setPaused(true);
   const result = summarize(state.answers, questions, factorNames);
   const [name, message] = archetypes[result.primary];
+  $('#resultTitle').firstChild.textContent = m('今の選択が描いた、', 'The choices you made suggest ');
+  $('#resultTitle').lastChild.textContent = m('。', '.');
   $('#resultArchetype').textContent = name;
   $('#resultLead').textContent = message;
-  $('#resultPhil').textContent = '— ' + (archePhil[result.primary] || '答えではなく、問いを持ち帰れ。');
-  $('#confidence').textContent = state.answers.length + '個の選択 / 検証済み尺度ではありません';
+  $('#resultPhil').textContent = '— ' + (archePhil[result.primary] || m('答えではなく、問いを持ち帰れ。', 'Take a question home, not a verdict.'));
+  $('#confidence').textContent = english ? `${state.answers.length} choices / not a validated measure` : state.answers.length + '個の選択 / 検証済み尺度ではありません';
   $('#factorBars').replaceChildren();
   for (const [key, label] of Object.entries(factorNames)) {
     const row = document.createElement('div'); row.className = 'factor';
@@ -661,69 +772,70 @@ function renderResult() {
     const value = document.createElement('b'); value.textContent = result.percentages[key];
     row.append(labelEl, bar, value); $('#factorBars').append(row);
   }
-  $('#resultMemo').textContent = '同じやさしさでも、「選んだ」のか「断れなかった」のかで、その内側は違う。\nあなたの言葉で、選択の理由をたどってみよう。';
+  $('#resultMemo').textContent = m('同じやさしさでも、「選んだ」のか「断れなかった」のかで、その内側は違う。\nあなたの言葉で、選択の理由をたどってみよう。', 'The same kindness can come from a free choice or from a fear of saying no.\nOnly you can trace the reason behind your choices.');
   $('#answerLog').replaceChildren();
   state.answers.forEach((key, i) => {
     const li = document.createElement('li');
-    li.textContent = questions[i].title + '\n→ ' + questions[i].answers.find(a => a[0] === key)[1] + (state.reasons[i] ? '\n理由：' + state.reasons[i] : '');
+    li.textContent = questions[i].title + '\n→ ' + questions[i].answers.find(a => a[0] === key)[1] + (state.reasons[i] ? '\n' + m('理由：', 'Reason: ') + state.reasons[i] : '') + (state.comments?.[i] ? '\n' + m('LFMの言葉：', 'LFM reflection: ') + state.comments[i] : '');
     $('#answerLog').append(li);
   });
   report = state.report || ''; hasSavedReport = !!report;
-  $('#aiOutput').textContent = report || 'ここにLFMが、あなたの選択と理由から手紙を書きます。定型文ではなく、この端末で生成します。';
-  $('#aiStatus').textContent = report ? '保存されたLFMの手紙' : 'LFM未生成。下のボタンから実行できます。';
+  $('#aiOutput').textContent = report || m('ここにLFMが、あなたの選択と理由から手紙を書きます。定型文ではなく、この端末で生成します。', 'LFM will write a letter from your choices and reasons here. It is generated on this device.');
+  $('#aiStatus').textContent = report ? m('保存されたLFMの手紙', 'Saved LFM letter') : m('LFM未生成。下のボタンから実行できます。', 'No LFM letter yet. Use the button below.');
   if (modelState === 'ready' && !report) generateReport();
-  if (modelState === 'loading') $('#aiStatus').textContent = 'LFMを読み込み中。完了後、自動で手紙を生成します。';
+  if (modelState === 'loading') $('#aiStatus').textContent = m('LFMを読み込み中。完了後、自動で手紙を生成します。', 'LFM is loading. The letter will start when it is ready.');
 }
 async function generateReport() {
   if (generating) return;
-  if (chatBusy) { $('#aiStatus').textContent = 'NPCとの会話生成が終わるまでお待ちください。'; return; }
+  if (chatBusy) { $('#aiStatus').textContent = m('NPCとの会話生成が終わるまでお待ちください。', 'Please wait for the current character response.'); return; }
   if (modelState !== 'ready') { await loadModel(); return; }
   requestId++; generating = true; report = ''; hasSavedReport = false;
   state.report = ''; save();
   $('#aiOutput').textContent = '';
   $('#aiOutput').setAttribute('aria-busy', 'true');
-  $('#aiStatus').textContent = 'LFMが選択の背景・葛藤・別の解釈を考えています…';
+  $('#aiStatus').textContent = m('LFMが選択の背景・葛藤・別の解釈を考えています…', 'LFM is exploring the tensions and other readings in your choices…');
   $('#generateBtn').disabled = true; $('#cancelModelBtn').hidden = false;
-  modelTimer = setTimeout(() => modelFailure('生成が時間上限に達しました'), 180000);
-  worker.postMessage({ type:'generate', id:requestId, messages:buildPrompt(state, questions) });
+  modelTimer = setTimeout(() => modelFailure(m('生成が時間上限に達しました', 'Generation timed out')), 180000);
+  worker.postMessage({ type:'generate', id:requestId, max_new_tokens:600, messages:buildPrompt(state, questions, lang) });
 }
 $('#generateBtn').onclick = generateReport;
 $('#restartBtn').onclick = () => {
-  if (generating || modelState === 'loading') { requestId++; disposeWorker(); setModelState('idle'); setStatus('LFM未読込'); }
+  if (generating || modelState === 'loading') { requestId++; disposeWorker(); setModelState('idle'); setStatus(m('LFM未読込', 'LFM not loaded')); }
   clearTimeout(chatTimer); chatBusy = false; closeNpc(); abortComment(); clearAmbient();
-  show('intro'); stopAnimation(); $('#resumeBtn').hidden = false; $('#resumeBtn').textContent = '今の結果を見る';
+  show('intro'); stopAnimation(); $('#resumeBtn').hidden = false; $('#resumeBtn').textContent = m('今の結果を見る', 'View current result');
 };
 $('#exportBtn').onclick = () => {
-  const text = 'EMBER — トワの旅の記録\n\n' + makeTranscript(state, questions) + '\n\nLFMの手紙\n' + (state.report || '未生成') + '\n\nこれは娯楽・自己対話用であり、医学的・心理学的な診断ではありません。';
+  const text = m('EMBER — トワの旅の記録\n\n', 'EMBER — Towa’s Journey Record\n\n') + makeTranscript(state, questions, lang) + m('\n\nLFMの手紙\n', '\n\nLFM Letter\n') + (state.report || m('未生成', 'Not generated')) + m('\n\nこれは娯楽・自己対話用であり、医学的・心理学的な診断ではありません。', '\n\nFor reflection and play, not a medical or psychological diagnosis.');
   const url = URL.createObjectURL(new Blob([text], { type:'text/plain;charset=utf-8' }));
   const link = document.createElement('a'); link.href = url; link.download = 'ember-journey.txt'; link.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 };
 $('#eraseBtn').onclick = () => {
-  if (!confirm('この端末に保存した回答と手紙を削除しますか？')) return;
+  if (!confirm(m('この端末に保存した回答と手紙を削除しますか？', 'Delete the answers and letter saved on this device?'))) return;
   try { localStorage.removeItem(SAVE_KEY); } catch {}
   requestId++; disposeWorker(); setModelState('idle');
   clearTimeout(chatTimer); chatBusy = false; closeNpc(); abortComment(); clearAmbient(); stopType();
   state = { version:2, index:0, answers:[], reasons:[], completed:false, report:'' };
-  report = ''; hasSavedReport = false; show('intro'); stopAnimation(); $('#resumeBtn').hidden = true; setStatus('保存した旅の記録を削除しました');
+  report = ''; hasSavedReport = false; show('intro'); stopAnimation(); $('#resumeBtn').hidden = true; setStatus(m('保存した旅の記録を削除しました', 'Saved journey deleted'));
 };
 window.addEventListener('pagehide', () => { requestId++; stopAnimation(); disposeWorker(); setModelState('idle'); });
-setStatus('LFM2-350M / 未読込');
+setStatus(m('LFM2-350M / 未読込', 'LFM2-350M / not loaded'));
+queueMissingComments();
+renderCommentJournal();
 syncSound();
 // 起動時の環境表示：WebGPU不可なら最初から理由を示す
 async function isBrave() {
   try { return !!(navigator.brave && (await navigator.brave.isBrave())); } catch { return false; }
 }
 async function gpuMissingAdvice() {
-  if (await isBrave()) return 'Braveの場合は：①アドレスバーのライオン→このサイトのShieldsをOFF ②設定→システム→ハードウェアアクセラレーションをON ③Braveを再起動';
-  return 'Chrome/Edge等の対応ブラウザでお試しください';
+  if (await isBrave()) return m('Braveの場合は：①アドレスバーのライオン→このサイトのShieldsをOFF ②設定→システム→ハードウェアアクセラレーションをON ③Braveを再起動', 'In Brave, disable Shields for this site, enable hardware acceleration, then restart Brave.');
+  return m('Chrome/Edge等の対応ブラウザでお試しください', 'Try a current Chrome or Edge browser, or use CPU mode.');
 }
 (function () {
   if (window.isSecureContext && navigator.gpu) return;
   gpuMissingAdvice().then(extra => {
-    setStatus('このブラウザ・環境ではWebGPUが使えません。' + extra);
-    const cpu = document.getElementById('cpuBtn');
-    if (cpu) cpu.hidden = false;
+    setStatus(m('このブラウザ・環境ではWebGPUが使えません。', 'WebGPU is unavailable in this browser. ') + extra);
+    ['cpuBtn', 'gameCpuBtn'].forEach(id => { const cpu = document.getElementById(id); if (cpu) cpu.hidden = false; });
     const force = document.getElementById('startForceBtn');
     if (force) force.hidden = false;
   });
@@ -742,11 +854,11 @@ window.__ember = () => ({ screen, modelState, lastModelError, progress: state.an
     if (!v || chatBusy || generating) return;
     npcLog.push({ who: 'you', text: v }); input.value = '';
     renderNpc();
-    if (!npcGenerate(v)) setNpcStatus(modelState === 'ready' ? '生成中です。少し待ってください。' : 'LFM未読込のため、定型文で応えます。');
+    if (!npcGenerate(v)) setNpcStatus(modelState === 'ready' ? m('生成中です。少し待ってください。', 'Generating. Please wait.') : m('LFM未読込のため、定型文で応えます。', 'LFM is not loaded. Story dialogue is available.'));
   };
   $('#npcSend').onclick = send;
   $('#npcInput').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); send(); } e.stopPropagation(); });
-  $('#npcNudge').onclick = () => { if (!npcGenerate(null)) setNpcStatus(modelState === 'ready' ? '生成中です。少し待ってください。' : 'LFM未読込のため、定型文で応えます。'); };
+  $('#npcNudge').onclick = () => { if (!npcGenerate(null)) setNpcStatus(modelState === 'ready' ? m('生成中です。少し待ってください。', 'Generating. Please wait.') : m('LFM未読込のため、定型文で応えます。', 'LFM is not loaded. Story dialogue is available.')); };
   $('#npcLoad').onclick = () => { loadModel(); updateNpcModel(); };
   const gs = $('#gameSoundBtn');
   if (gs) gs.onclick = toggleSound;
@@ -754,7 +866,13 @@ window.__ember = () => ({ screen, modelState, lastModelError, progress: state.an
   if (ts) ts.onclick = toggleSound;
 })();
 // タイトル画面の哲学的名言ローテーション
-const TITLE_QUOTES = [
+const TITLE_QUOTES = english ? [
+  'The road you did not take still shaped your step.',
+  'Know yourself.',
+  'A friend can be another self without becoming a mirror.',
+  'What we protect also changes us.',
+  'Take a question home, not a verdict.',
+] : [
   '選ばなかった道が、あなたを形づくる。',
   '汝自身を知れ。',
   '友とは、第二の自己である。',
