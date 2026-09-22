@@ -18,8 +18,9 @@
 
 - 推論モデル: [onnx-community/LFM2-350M-ONNX](https://huggingface.co/onnx-community/LFM2-350M-ONNX)
 - 元モデル: [LiquidAI/LFM2-350M](https://huggingface.co/LiquidAI/LFM2-350M)
-- ランタイム: Transformers.js **3.8.1**、ONNX Runtime Web、`device: "webgpu"`、`dtype: "q4"`
-- モデル取得: Hugging Faceから公開ONNX重みを取得。重みは同梱せず、モデル側のmainを参照します（変更に追随するため、長期運用では検証済みコミットに固定してください）。
+- ランタイム: Transformers.js **4.3.0**、ONNX Runtime Web。WebGPUでは `q4`、手動で選ぶCPUモードでは `fp32` を使用します。
+- モデル取得: Hugging Faceから公開ONNX重みを取得。重みは同梱せず、モデルを検証済みコミットに固定しています。
+- CPUモードの重みは約1.5GBで、読み込み時にはさらにメモリが必要です。WebGPU非対応PCでの動作は端末のメモリとブラウザの制限に左右されます。
 - 推論は専用Worker内。トークン単位の逐次表示、進捗、タイムアウト、再試行、キャンセルあり。
 - CDN importはモデル起動時のみ。APIキー・サーバー・有料推論APIは不要。
 - GitHub PagesのCOOP/COEP制約に備えて補助WASM処理は1スレッド設定。

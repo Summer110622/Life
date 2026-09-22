@@ -2,7 +2,7 @@
 // The documented ONNX conversion supports q4 + WebGPU with Transformers.js.
 const MODEL = 'onnx-community/LFM2-350M-ONNX';
 const REVISION = '1888d143147cd4f17d4b75a60f9bc8a568e2342d'; // 動作検証済みの版に固定
-const LIBRARY = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1';
+const LIBRARY = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.3.0';
 let generator = null, loading = null, running = false, api = null, device = 'webgpu';
 
 async function getGenerator() {
@@ -20,7 +20,8 @@ async function getGenerator() {
     const loadedFiles = new Map();
     generator = await api.pipeline('text-generation', MODEL, {
       device,
-      dtype:'q4',
+      // The quantized graph uses GatherBlockQuantized, which the WASM backend cannot run.
+      dtype:device === 'wasm' ? 'fp32' : 'q4',
       revision:REVISION,
       progress_callback: info => {
         if (info.status === 'progress') {
@@ -66,6 +67,10 @@ self.onmessage = async ({ data }) => {
       self.postMessage({ type:'complete', id:data.id, text });
     }
   } catch (error) {
-    self.postMessage({ type:'error', id:data.id, message:String(error.message || error).slice(0,350) });
+    const detail = String(error?.message || error);
+    const message = /^\d+$/.test(detail)
+      ? `モデルの初期化に失敗しました（実行環境エラー ${detail}）`
+      : detail;
+    self.postMessage({ type:'error', id:data.id, message:message.slice(0,350) });
   } finally { running = false; }
 };
