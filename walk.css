@@ -535,7 +535,7 @@ body.title {
 
 #introScreen.hero {
   grid-template-columns: 1fr;
-  width: min(1100px, 100%);
+  width: 100%;
   gap: 0;
 }
 

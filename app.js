@@ -404,6 +404,8 @@ function modelFailure(message) {
   setStatus(message);
   $('#aiStatus').textContent = message + '。再試行できます。通常のゲーム進行には影響しません。';
   $('#generateBtn').textContent = 'LFMを再読み込みして生成';
+  const retry = $('#modelRetry');
+  if (retry) retry.hidden = false;
 }
 function createModelWorker() {
   if (worker) return;
@@ -465,6 +467,8 @@ function createModelWorker() {
     }
     if (data.type === 'ready') {
       clearTimeout(modelTimer); setModelState('ready');
+      const retry1 = $('#modelRetry');
+      if (retry1) retry1.hidden = true;
       setStatus('LFM2-350M · WebGPU READY');
       $('#cancelModelBtn').hidden = true;
       $('#startAiBtn').disabled = false;
@@ -496,6 +500,8 @@ async function loadModel() {
   if (modelState === 'ready') return true;
   if (modelState === 'loading') return false;
   setModelState('loading');
+  const retry0 = $('#modelRetry');
+  if (retry0) retry0.hidden = true;
   $('#startAiBtn').disabled = true; $('#cancelModelBtn').hidden = false;
   setStatus('WebGPUを確認しています');
   if (!isSecureContext || !navigator.gpu) {
@@ -519,6 +525,8 @@ $('#cancelModelBtn').onclick = () => {
   $('#aiStatus').textContent = 'AI処理を停止しました。再読み込みできます。';
   updateNpcModel(); renderNpc();
 };
+const modelRetryBtn = $('#modelRetry');
+if (modelRetryBtn) modelRetryBtn.onclick = () => { loadModel(); };
 function startNew() {
   clearTimeout(transitionTimer); busy = false; stopType(); closeNpc(); abortComment();
   state = { version:2, index:0, answers:[], reasons:[], completed:false, report:'' };
