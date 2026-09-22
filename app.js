@@ -909,6 +909,6 @@ const TITLE_QUOTES = english ? [
     } catch { /* Fullscreen不可の環境ではCSS全画面のまま */ }
   };
   document.addEventListener('fullscreenchange', () => {
-    btn.textContent = document.fullscreenElement ? '⛶ 終了' : '⛶ 全画面';
+    btn.textContent = document.fullscreenElement ? m('⛶ 終了', '⛶ Exit full screen') : m('⛶ 全画面', '⛶ Full screen');
   });
 })();
