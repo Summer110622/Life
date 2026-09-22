@@ -417,6 +417,8 @@ function modelFailure(message) {
   $('#startAiBtn').textContent = 'LFMで旅をはじめる';
   const retry = $('#modelRetry');
   if (retry) retry.hidden = false;
+  const force = $('#startForceBtn');
+  if (force) force.hidden = false;
 }
 function createModelWorker() {
   if (worker) return;
@@ -484,6 +486,8 @@ function createModelWorker() {
       clearTimeout(modelTimer); setModelState('ready');
       const retry1 = $('#modelRetry');
       if (retry1) retry1.hidden = true;
+      const force1 = $('#startForceBtn');
+      if (force1) force1.hidden = true;
       setStatus('LFM2-350M · WebGPU READY');
       $('#cancelModelBtn').hidden = true;
       $('#startAiBtn').disabled = false;
@@ -518,6 +522,8 @@ async function loadModel() {
   setModelState('loading');
   const retry0 = $('#modelRetry');
   if (retry0) retry0.hidden = true;
+  const force0 = $('#startForceBtn');
+  if (force0) force0.hidden = true;
   $('#startAiBtn').disabled = true; $('#cancelModelBtn').hidden = false;
   setStatus('WebGPUを確認しています');
   if (!isSecureContext || !navigator.gpu) {
@@ -538,6 +544,8 @@ $('#cancelModelBtn').onclick = () => {
   requestId++; disposeWorker(); setModelState('idle');
   clearTimeout(chatTimer); chatBusy = false; chatDraft = ''; abortComment(); clearAmbient();
   setStatus('LFMを停止しました');
+  $('#startAiBtn').disabled = false;
+  $('#startAiBtn').textContent = 'LFMで旅をはじめる';
   if (!hasSavedReport) { report = ''; $('#aiOutput').textContent = '生成は完了していません。'; }
   $('#aiStatus').textContent = 'AI処理を停止しました。再読み込みできます。';
   updateNpcModel(); renderNpc();
@@ -545,6 +553,8 @@ $('#cancelModelBtn').onclick = () => {
 };
 const modelRetryBtn = $('#modelRetry');
 if (modelRetryBtn) modelRetryBtn.onclick = () => { loadModel(); };
+const startForceBtn = $('#startForceBtn');
+if (startForceBtn) startForceBtn.onclick = () => { startNew(); };
 function startNew() {
   clearTimeout(transitionTimer); busy = false; stopType(); closeNpc(); abortComment();
   state = { version:2, index:0, answers:[], reasons:[], completed:false, report:'' };
@@ -707,6 +717,13 @@ $('#eraseBtn').onclick = () => {
 window.addEventListener('pagehide', () => { requestId++; stopAnimation(); disposeWorker(); setModelState('idle'); });
 setStatus('LFM2-350M / 未読込');
 syncSound();
+// 起動時の環境表示：WebGPU不可なら最初から理由を示す
+(function () {
+  if (window.isSecureContext && navigator.gpu) return;
+  setStatus('このブラウザ・環境ではWebGPUが使えません。Chrome/Edge等の対応ブラウザでお試しください');
+})();
+// 診断用フック（コンソールで __ember() と呼ぶと状態が分かります）
+window.__ember = () => ({ screen, modelState, lastModelError, progress: state.answers.length + '/' + questions.length });
 // NPC会話UIの配線
 (function () {
   const npcBtn = $('#npcBtn');
