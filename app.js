@@ -7,21 +7,10 @@ const SAVE_KEY = 'ember-life-v2';
 let state = loadSave(localStorageSafeGet(SAVE_KEY), questions);
 let screen = 'intro', busy = false, frameTimer = null, transitionTimer = null, frame = 0;
 let worker = null, modelState = 'idle', modelTimer = null, generating = false, requestId = 0;
-let lastModelError = '', loadStart = 0, readyWaiters = [], cpuMode = false, cpuAutoStart = false;
+let lastModelError = '', loadStart = 0, cpuMode = false;
 function setModelState(s) {
   modelState = s;
   document.body.dataset.lfm = s;
-}
-// LFM必須ゲート：READYになるまで待つ。失敗時はfalseで復帰する
-async function ensureModel() {
-  if (modelState === 'ready') return true;
-  if (modelState !== 'loading') await loadModel();
-  if (modelState === 'ready') return true;
-  if (modelState !== 'loading') return false; // 即失敗時は待たずに復帰
-  return new Promise(res => readyWaiters.push(res));
-}
-function settleWaiters(ok) {
-  readyWaiters.splice(0).forEach(fn => { try { fn(ok); } catch {} });
 }
 let report = '', hasSavedReport = false;
 let walk = null, dialogueOpen = false, walkScene = -1;
@@ -411,12 +400,12 @@ function disposeWorker() {
   $('#aiOutput').setAttribute('aria-busy', 'false');
 }
 function modelFailure(message) {
-  disposeWorker(); lastModelError = message; setModelState('error'); settleWaiters(false); cpuAutoStart = false;
+  disposeWorker(); lastModelError = message; setModelState('error');
   setStatus(message);
-  $('#aiStatus').textContent = message + '。プレイにはLFMが必須のため、下の再試行ボタンで読み込み直してください。';
+  $('#aiStatus').textContent = message + '。旅は続けられます。LFMが必要な場合は読み込み直してください。';
   $('#generateBtn').textContent = 'LFMを再読み込みして生成';
   $('#startAiBtn').disabled = false;
-  $('#startAiBtn').textContent = 'LFMで旅をはじめる';
+  $('#startAiBtn').textContent = '旅をはじめる';
   const retry = $('#modelRetry');
   if (retry) retry.hidden = false;
   const force = $('#startForceBtn');
@@ -492,13 +481,11 @@ function createModelWorker() {
       setStatus(cpuMode ? 'LFM2-350M · CPU READY（低速）' : 'LFM2-350M · WebGPU READY');
       $('#cancelModelBtn').hidden = true;
       $('#startAiBtn').disabled = false;
-      $('#startAiBtn').textContent = 'LFMで旅をはじめる';
+      $('#startAiBtn').textContent = '旅をはじめる';
       $('#aiStatus').textContent = 'LFMの準備ができました。回答をもとに手紙を生成できます。';
       updateNpcModel();
       if (npcOpen && !chatBusy && !generating) npcGenerate(null);
       deliverAmbient();
-      settleWaiters(true);
-      if (cpuAutoStart) { cpuAutoStart = false; if (screen === 'intro') startNew(); }
       if (screen === 'result') generateReport();
     }
     if (data.type === 'token') {
@@ -548,15 +535,14 @@ async function loadModel(want = 'webgpu') {
   } catch { modelFailure(cpuMode ? 'CPUモードを開始できませんでした' : 'GPUを取得できません。対応端末でお試しください'); return false; }
 }
 $('#cancelModelBtn').onclick = () => {
-  requestId++; disposeWorker(); setModelState('idle'); cpuAutoStart = false;
+  requestId++; disposeWorker(); setModelState('idle');
   clearTimeout(chatTimer); chatBusy = false; chatDraft = ''; abortComment(); clearAmbient();
   setStatus('LFMを停止しました');
   $('#startAiBtn').disabled = false;
-  $('#startAiBtn').textContent = 'LFMで旅をはじめる';
+  $('#startAiBtn').textContent = '旅をはじめる';
   if (!hasSavedReport) { report = ''; $('#aiOutput').textContent = '生成は完了していません。'; }
   $('#aiStatus').textContent = 'AI処理を停止しました。再読み込みできます。';
   updateNpcModel(); renderNpc();
-  settleWaiters(false);
 };
 const modelRetryBtn = $('#modelRetry');
 if (modelRetryBtn) modelRetryBtn.onclick = () => { loadModel(); };
@@ -564,9 +550,8 @@ const startForceBtn = $('#startForceBtn');
 if (startForceBtn) startForceBtn.onclick = () => { startNew(); };
 const cpuBtn = $('#cpuBtn');
 if (cpuBtn) cpuBtn.onclick = async () => {
-  cpuAutoStart = true;
-  $('#startAiBtn').disabled = true; $('#startAiBtn').textContent = 'CPU読込中…';
-  loadModel('wasm');
+  if (screen === 'intro') startNew();
+  void loadModel('wasm');
 };
 function startNew() {
   clearTimeout(transitionTimer); busy = false; stopType(); closeNpc(); abortComment();
@@ -579,24 +564,15 @@ function startNew() {
   if (pane) { pane.hidden = true; pane.classList.remove('dialogue-open'); }
   ensureWalk(); syncWalk(); animate();
 }
-$('#startAiBtn').onclick = async () => {
-  const btn = $('#startAiBtn');
-  btn.disabled = true; btn.textContent = 'LFM読込中…';
-  let ok = false;
-  try { ok = await ensureModel(); } catch { ok = false; }
-  if (ok) startNew();
-  else if (modelState !== 'loading') { btn.disabled = false; btn.textContent = 'LFMで旅をはじめる'; }
-  // 失敗時は modelFailure が再試行ボタンを出す
+$('#startAiBtn').onclick = () => {
+  startNew();
+  if (modelState !== 'ready' && modelState !== 'loading') void loadModel();
 };
 $('#resumeBtn').hidden = !state.answers.length;
-$('#resumeBtn').onclick = async () => {
+$('#resumeBtn').onclick = () => {
   if (state.completed) { renderResult(); return; }
-  const btn = $('#resumeBtn'), label = btn.textContent;
-  btn.disabled = true; btn.textContent = 'LFM読込中…';
-  let ok = false;
-  try { ok = await ensureModel(); } catch { ok = false; }
-  btn.disabled = false; btn.textContent = label;
-  if (ok) { show('play'); ensureWalk(); syncWalk(); animate(); startBgm(); }
+  show('play'); ensureWalk(); syncWalk(); animate(); startBgm();
+  if (modelState !== 'ready' && modelState !== 'loading') void loadModel();
 };
 function renderQuestion() {
   const q = questions[state.index];
