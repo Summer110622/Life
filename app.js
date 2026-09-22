@@ -7,7 +7,7 @@ const SAVE_KEY = 'ember-life-v2';
 let state = loadSave(localStorageSafeGet(SAVE_KEY), questions);
 let screen = 'intro', busy = false, frameTimer = null, transitionTimer = null, frame = 0;
 let worker = null, modelState = 'idle', modelTimer = null, generating = false, requestId = 0;
-let lastModelError = '', loadStart = 0, readyWaiters = [];
+let lastModelError = '', loadStart = 0, readyWaiters = [], cpuMode = false, cpuAutoStart = false;
 function setModelState(s) {
   modelState = s;
   document.body.dataset.lfm = s;
@@ -409,7 +409,7 @@ function disposeWorker() {
   $('#aiOutput').setAttribute('aria-busy', 'false');
 }
 function modelFailure(message) {
-  disposeWorker(); lastModelError = message; setModelState('error'); settleWaiters(false);
+  disposeWorker(); lastModelError = message; setModelState('error'); settleWaiters(false); cpuAutoStart = false;
   setStatus(message);
   $('#aiStatus').textContent = message + '。プレイにはLFMが必須のため、下の再試行ボタンで読み込み直してください。';
   $('#generateBtn').textContent = 'LFMを再読み込みして生成';
@@ -419,6 +419,8 @@ function modelFailure(message) {
   if (retry) retry.hidden = false;
   const force = $('#startForceBtn');
   if (force) force.hidden = false;
+  const cpu = $('#cpuBtn');
+  if (cpu) cpu.hidden = false;
 }
 function createModelWorker() {
   if (worker) return;
@@ -484,11 +486,8 @@ function createModelWorker() {
     }
     if (data.type === 'ready') {
       clearTimeout(modelTimer); setModelState('ready');
-      const retry1 = $('#modelRetry');
-      if (retry1) retry1.hidden = true;
-      const force1 = $('#startForceBtn');
-      if (force1) force1.hidden = true;
-      setStatus('LFM2-350M · WebGPU READY');
+      ['modelRetry', 'startForceBtn', 'cpuBtn'].forEach(id => { const el = document.getElementById(id); if (el) el.hidden = true; });
+      setStatus(cpuMode ? 'LFM2-350M · CPU READY（低速）' : 'LFM2-350M · WebGPU READY');
       $('#cancelModelBtn').hidden = true;
       $('#startAiBtn').disabled = false;
       $('#startAiBtn').textContent = 'LFMで旅をはじめる';
@@ -497,6 +496,7 @@ function createModelWorker() {
       if (npcOpen && !chatBusy && !generating) npcGenerate(null);
       deliverAmbient();
       settleWaiters(true);
+      if (cpuAutoStart) { cpuAutoStart = false; if (screen === 'intro') startNew(); }
       if (screen === 'result') generateReport();
     }
     if (data.type === 'token') {
@@ -516,33 +516,37 @@ function createModelWorker() {
   };
   worker.onerror = e => { e.preventDefault(); modelFailure('LFMの起動に失敗しました。通信・WebGPU対応をご確認ください'); };
 }
-async function loadModel() {
+async function loadModel(want = 'webgpu') {
   if (modelState === 'ready') return true;
   if (modelState === 'loading') return false;
+  cpuMode = want === 'wasm';
   setModelState('loading');
-  const retry0 = $('#modelRetry');
-  if (retry0) retry0.hidden = true;
-  const force0 = $('#startForceBtn');
-  if (force0) force0.hidden = true;
+  ['modelRetry', 'startForceBtn', 'cpuBtn'].forEach(id => { const el = document.getElementById(id); if (el) el.hidden = true; });
   $('#startAiBtn').disabled = true; $('#cancelModelBtn').hidden = false;
-  setStatus('WebGPUを確認しています');
-  if (!isSecureContext || !navigator.gpu) {
+  setStatus(cpuMode ? 'CPUモードで確認中（低速）' : 'WebGPUを確認しています');
+  if (!isSecureContext) {
+    modelFailure('HTTPSまたはlocalhostの環境でお試しください');
+    return false;
+  }
+  if (want === 'webgpu' && !navigator.gpu) {
     const extra = await gpuMissingAdvice();
     modelFailure('この環境ではWebGPUが利用できません。' + extra);
     return false;
   }
   try {
-    const adapter = await navigator.gpu.requestAdapter();
-    if (!adapter) throw new Error('GPU adapter unavailable');
+    if (want === 'webgpu') {
+      const adapter = await navigator.gpu.requestAdapter();
+      if (!adapter) throw new Error('GPU adapter unavailable');
+    }
     createModelWorker();
     loadStart = Date.now();
     modelTimer = setTimeout(() => modelFailure('読み込みが時間上限(30分)に達しました。通信を確認して再試行してください'), 1800000);
-    worker.postMessage({ type:'load' });
+    worker.postMessage({ type:'load', device: want });
     return true;
-  } catch { modelFailure('GPUを取得できません。対応端末でお試しください'); return false; }
+  } catch { modelFailure(cpuMode ? 'CPUモードを開始できませんでした' : 'GPUを取得できません。対応端末でお試しください'); return false; }
 }
 $('#cancelModelBtn').onclick = () => {
-  requestId++; disposeWorker(); setModelState('idle');
+  requestId++; disposeWorker(); setModelState('idle'); cpuAutoStart = false;
   clearTimeout(chatTimer); chatBusy = false; chatDraft = ''; abortComment(); clearAmbient();
   setStatus('LFMを停止しました');
   $('#startAiBtn').disabled = false;
@@ -556,6 +560,12 @@ const modelRetryBtn = $('#modelRetry');
 if (modelRetryBtn) modelRetryBtn.onclick = () => { loadModel(); };
 const startForceBtn = $('#startForceBtn');
 if (startForceBtn) startForceBtn.onclick = () => { startNew(); };
+const cpuBtn = $('#cpuBtn');
+if (cpuBtn) cpuBtn.onclick = async () => {
+  cpuAutoStart = true;
+  $('#startAiBtn').disabled = true; $('#startAiBtn').textContent = 'CPU読込中…';
+  loadModel('wasm');
+};
 function startNew() {
   clearTimeout(transitionTimer); busy = false; stopType(); closeNpc(); abortComment();
   state = { version:2, index:0, answers:[], reasons:[], completed:false, report:'' };
@@ -730,6 +740,10 @@ async function gpuMissingAdvice() {
   if (window.isSecureContext && navigator.gpu) return;
   gpuMissingAdvice().then(extra => {
     setStatus('このブラウザ・環境ではWebGPUが使えません。' + extra);
+    const cpu = document.getElementById('cpuBtn');
+    if (cpu) cpu.hidden = false;
+    const force = document.getElementById('startForceBtn');
+    if (force) force.hidden = false;
   });
 })();
 // 診断用フック（コンソールで __ember() と呼ぶと状態が分かります）

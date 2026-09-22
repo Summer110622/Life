@@ -3,14 +3,14 @@
 const MODEL = 'onnx-community/LFM2-350M-ONNX';
 const REVISION = '1888d143147cd4f17d4b75a60f9bc8a568e2342d'; // 動作検証済みの版に固定
 const LIBRARY = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1';
-let generator = null, loading = null, running = false, api = null;
+let generator = null, loading = null, running = false, api = null, device = 'webgpu';
 
 async function getGenerator() {
   if (generator) return generator;
   if (loading) return loading;
   loading = (async () => {
-    if (!self.navigator.gpu) throw new Error('WebGPUが利用できません');
-    self.postMessage({ type:'status', message:'LFM2-350Mのランタイムを取得中' });
+    if (device === 'webgpu' && !self.navigator.gpu) throw new Error('WebGPUが利用できません');
+    self.postMessage({ type:'status', message: device === 'wasm' ? 'CPUモードでランタイムを取得中（低速）' : 'LFM2-350Mのランタイムを取得中' });
     api = await import(LIBRARY);
     self.postMessage({ type:'status', message:'ランタイムOK・重みを取得中' });
     api.env.allowLocalModels = false;
@@ -19,7 +19,7 @@ async function getGenerator() {
     try { api.env.backends.onnx.wasm.numThreads = 1; } catch {}
     const loadedFiles = new Map();
     generator = await api.pipeline('text-generation', MODEL, {
-      device:'webgpu',
+      device,
       dtype:'q4',
       revision:REVISION,
       progress_callback: info => {
@@ -45,6 +45,9 @@ self.onmessage = async ({ data }) => {
   if (running) return;
   try {
     if (data.type === 'load') {
+      if (data.device === 'wasm' || data.device === 'webgpu') {
+        if (device !== data.device) { device = data.device; generator = null; }
+      }
       await getGenerator();
       self.postMessage({ type:'ready' });
     } else if (data.type === 'generate') {
