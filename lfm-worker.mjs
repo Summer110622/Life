@@ -1,6 +1,7 @@
 // Liquid AI LFM2 is a language model, not a custom score-adding shader.
 // The documented ONNX conversion supports q4 + WebGPU with Transformers.js.
 const MODEL = 'onnx-community/LFM2-350M-ONNX';
+const REVISION = '1888d143147cd4f17d4b75a60f9bc8a568e2342d'; // 動作検証済みの版に固定
 const LIBRARY = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1';
 let generator = null, loading = null, running = false, api = null;
 
@@ -9,16 +10,18 @@ async function getGenerator() {
   if (loading) return loading;
   loading = (async () => {
     if (!self.navigator.gpu) throw new Error('WebGPUが利用できません');
-    self.postMessage({ type:'status', message:'LFM2-350Mのランタイムを読み込み中' });
+    self.postMessage({ type:'status', message:'LFM2-350Mのランタイムを取得中' });
     api = await import(LIBRARY);
+    self.postMessage({ type:'status', message:'ランタイムOK・重みを取得中' });
     api.env.allowLocalModels = false;
     api.env.useBrowserCache = true;
     // GitHub Pages cannot configure COOP/COEP headers. Keep auxiliary WASM single-threaded.
-    api.env.backends.onnx.wasm.numThreads = 1;
+    try { api.env.backends.onnx.wasm.numThreads = 1; } catch {}
     const loadedFiles = new Map();
     generator = await api.pipeline('text-generation', MODEL, {
       device:'webgpu',
       dtype:'q4',
+      revision:REVISION,
       progress_callback: info => {
         if (info.status === 'progress') {
           loadedFiles.set(info.file, { loaded:info.loaded || 0, total:info.total || 0 });
