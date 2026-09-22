@@ -1,0 +1,7 @@
+{
+  "name":"ember-life",
+  "version":"0.2.0",
+  "private":true,
+  "type":"module",
+  "scripts":{"test":"node --test tests/core.test.mjs","serve":"python3 -m http.server 4173"}
+}
