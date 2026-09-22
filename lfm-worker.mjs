@@ -3,16 +3,17 @@
 const MODEL = 'onnx-community/LFM2-350M-ONNX';
 const REVISION = '1888d143147cd4f17d4b75a60f9bc8a568e2342d'; // 動作検証済みの版に固定
 const LIBRARY = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.3.0';
-let generator = null, loading = null, running = false, api = null, device = 'webgpu';
+let generator = null, loading = null, running = false, api = null, device = 'webgpu', language = 'ja';
+const pending = [];
 
 async function getGenerator() {
   if (generator) return generator;
   if (loading) return loading;
   loading = (async () => {
-    if (device === 'webgpu' && !self.navigator.gpu) throw new Error('WebGPUが利用できません');
-    self.postMessage({ type:'status', message: device === 'wasm' ? 'CPUモードでランタイムを取得中（低速）' : 'LFM2-350Mのランタイムを取得中' });
+    if (device === 'webgpu' && !self.navigator.gpu) throw new Error(language === 'en' ? 'WebGPU is unavailable' : 'WebGPUが利用できません');
+    self.postMessage({ type:'status', message: device === 'wasm' ? (language === 'en' ? 'Loading CPU runtime (slow)' : 'CPUモードでランタイムを取得中（低速）') : (language === 'en' ? 'Loading the LFM2-350M runtime' : 'LFM2-350Mのランタイムを取得中') });
     api = await import(LIBRARY);
-    self.postMessage({ type:'status', message:'ランタイムOK・重みを取得中' });
+    self.postMessage({ type:'status', message:language === 'en' ? 'Runtime ready · downloading model weights' : 'ランタイムOK・重みを取得中' });
     api.env.allowLocalModels = false;
     api.env.useBrowserCache = true;
     // GitHub Pages cannot configure COOP/COEP headers. Keep auxiliary WASM single-threaded.
@@ -43,9 +44,10 @@ self.onmessage = async ({ data }) => {
     if (!running && generator) { await generator.dispose(); generator = null; }
     return;
   }
-  if (running) return;
+  if (running) { pending.push(data); return; }
   try {
     if (data.type === 'load') {
+      language = data.lang === 'en' ? 'en' : 'ja';
       if (data.device === 'wasm' || data.device === 'webgpu') {
         if (device !== data.device) { device = data.device; generator = null; }
       }
@@ -59,18 +61,22 @@ self.onmessage = async ({ data }) => {
         callback_function:text => self.postMessage({ type:'token', id:data.id, text }),
       });
       const output = await pipe(data.messages, {
-        max_new_tokens:1000, do_sample:false, repetition_penalty:1.05, streamer,
+        max_new_tokens:Math.max(1, Math.min(600, Number(data.max_new_tokens) || 128)),
+        do_sample:false, repetition_penalty:1.05, streamer,
       });
       const result = output[0].generated_text;
       const text = Array.isArray(result) ? result.at(-1).content : result;
-      if (typeof text !== 'string' || !text.trim()) throw new Error('生成結果が空でした');
+      if (typeof text !== 'string' || !text.trim()) throw new Error(language === 'en' ? 'Generation returned no text' : '生成結果が空でした');
       self.postMessage({ type:'complete', id:data.id, text });
     }
   } catch (error) {
     const detail = String(error?.message || error);
     const message = /^\d+$/.test(detail)
-      ? `モデルの初期化に失敗しました（実行環境エラー ${detail}）`
+      ? (language === 'en' ? `Model initialization failed (runtime error ${detail})` : `モデルの初期化に失敗しました（実行環境エラー ${detail}）`)
       : detail;
     self.postMessage({ type:'error', id:data.id, message:message.slice(0,350) });
-  } finally { running = false; }
+  } finally {
+    running = false;
+    if (pending.length) queueMicrotask(() => self.onmessage({ data: pending.shift() }));
+  }
 };

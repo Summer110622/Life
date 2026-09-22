@@ -22,6 +22,7 @@ button:focus-visible, textarea:focus-visible, summary:focus-visible { outline:2p
 .character-note { line-height:1.8; margin-top:8px; }
 .progress-row { margin-bottom:22px; }
 .question-pane h2 { font-size:clamp(24px,2.5vw,34px); }
+.question-pane h2,.question-sub,.answer-btn,.ai-output { text-wrap:pretty; overflow-wrap:break-word; }
 .question-sub { margin-bottom:18px; }
 .answer-btn { padding:11px 14px; }
 .answer-btn.chosen { border-color:var(--ember); background:#3a2220; opacity:1; }
