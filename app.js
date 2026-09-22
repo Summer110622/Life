@@ -352,7 +352,7 @@ function finishComment() {
   commentGenerating = false;
   if (stillGenerating) {
     ambientMode = true;
-    ambientName = curNpc()?.name || characters[0].name;
+    ambientName = commentSpeaker(activeCommentIndex, characters).name;
     clearTimeout(ambientTimer);
     ambientTimer = setTimeout(() => {
       ambientMode = false; chatBusy = false; requestId++;
@@ -363,8 +363,9 @@ function finishComment() {
   clearTimeout(commentTimer); clearTimeout(chatTimer);
   const done = commentCallback;
   commentCallback = null;
-  $('#speechBalloon').hidden = true;
+  if (!stillGenerating) $('#speechBalloon').hidden = true;
   if (done) done();
+  if (stillGenerating) updateNpcHud();
   if (!stillGenerating) deliverAmbient();
 }
 function abortComment() {
@@ -428,6 +429,8 @@ function showNpcComment(answerLabel, reason, done) {
       setBalloon(who, m('LFMの生成が時間切れになりました。後でコメントを届けます。', 'LFM is taking longer. I will bring the comment when it is ready.'));
       commentTimer = setTimeout(finishComment, 2200);
     }, 15000);
+    // Keep the journey moving while each token appears in the balloon and journal.
+    if (!state.completed) commentTimer = setTimeout(finishComment, 1200);
     worker.postMessage({ type: 'generate', id: chatReqId, max_new_tokens: 48, messages: buildCommentPrompt({
       npc: c, sceneName: questions[state.index].name, answer: say, lang,
     }) });
@@ -439,7 +442,7 @@ function showNpcComment(answerLabel, reason, done) {
     });
     setBalloon(who, m('LFM準備中…この回答への言葉を後で届けます', 'LFM is loading. I will bring a comment on this choice later.'));
     clearTimeout(commentTimer);
-    commentTimer = setTimeout(finishComment, 4000);
+    commentTimer = setTimeout(finishComment, 1200);
   } else {
     // 定型相づちは使わない。LFM不可の理由を示して進む
     if (modelState === 'idle' || modelState === 'loading') loadModel();
@@ -518,7 +521,7 @@ function createModelWorker() {
           if (chatDraft === data.text) $('#commentJournal').open = true;
           renderCommentJournal(activeCommentIndex, chatDraft);
         }
-        if (commentMode) setBalloon(curNpc() ? curNpc().name : characters[0].name, chatDraft.slice(0, 140));
+        if (commentMode) setBalloon(commentSpeaker(activeCommentIndex, characters).name, chatDraft.slice(0, 140));
         else if (ambientMode) setBalloon(ambientName || characters[0].name, chatDraft.slice(0, 140));
         else renderNpc();
       }
