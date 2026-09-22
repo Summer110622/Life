@@ -45,8 +45,8 @@
 
       <section class="play-screen screen" id="playScreen" aria-labelledby="questionTitle">
         <div class="play-scene">
-          <div class="scene-label"><span id="sceneNo">SCENE 01</span><span id="sceneName">入口 / THE GATE</span></div>
           <div class="walk-wrap">
+            <div class="map-hud-top"><span id="sceneNo">SCENE 01</span><span id="sceneName">入口 / THE GATE</span><span id="speaker">トワ / 記憶のない歩行者</span></div>
             <canvas id="walkCanvas" width="960" height="540" aria-label="歩き回れるマップ。WASD・矢印キーで移動、Eキーで話す"></canvas>
             <button type="button" class="fs-btn" id="fsBtn" aria-label="全画面切り替え">⛶ 全画面</button>
             <div class="sys-hud"><button type="button" id="gameSoundBtn" aria-label="BGMの再生・停止">♪</button><span id="walkStatus" role="status">LFM / 未読込</span></div>
@@ -66,12 +66,8 @@
                 <span class="spacer"></span><span class="spacer"></span><span class="spacer"></span>
               </div>
               <button type="button" class="talk-btn" id="talkBtn">話す E</button>
-            </div>
           </div>
-          <p id="speaker" class="speaker">トワ / 記憶のない歩行者</p>
-          <div class="character-note"><span class="note-dot"></span><span id="sceneNote">◆ を目指して歩こう。近づいたら E / タップで話す。</span></div>
-        </div>
-        <div class="question-pane" id="questionPane" hidden>
+          <div class="question-pane" id="questionPane" hidden>
           <div class="progress-row"><span id="questionCount">01 / 18</span><div class="progress-track"><i id="progressBar"></i></div><span id="depthLabel">DEPTH 01</span></div>
           <div class="dlg-head"><img id="dlgPortrait" alt="" width="48" height="48"><div><div class="question-kicker" id="questionKicker">最初の印象</div></div></div>
           <h2 id="questionTitle" tabindex="-1">町に入る前、あなたは何を確認する？</h2>
@@ -80,8 +76,10 @@
           <label class="reason-label" for="reason">答える前に、理由をひと言残す <span>任意・240文字</span></label>
           <textarea id="reason" maxlength="240" rows="2" placeholder="同じ選択でも、その理由は人それぞれ。"></textarea>
           <div class="answer-foot"><span id="saveMessage">この端末に自動保存 / 1〜4キーでも選択</span><button class="ghost-btn" id="backBtn" type="button" disabled>← 戻る</button></div>
+          </div>
         </div>
-      </section>
+      </div>
+    </section>
 
       <section class="result-screen screen" id="resultScreen" aria-labelledby="resultTitle">
         <div class="result-top"><p class="eyebrow">JOURNEY / 18 SCENES</p><h2 id="resultTitle">今の選択が描いた、<br><em id="resultArchetype">静かな観測者</em>。</h2><p id="resultLead"></p><p id="resultPhil" class="result-phil"></p><button class="primary-btn" id="restartBtn" type="button">旅の入口へ戻る ↻</button></div>

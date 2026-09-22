@@ -690,3 +690,60 @@ body.title #introScreen.screen.active {
   .embers { display: none; }
   #sceneCard { transition: none; }
 }
+
+/* ---- MAXIMIZED：ゲーム画面いっぱいに広げ、対話はすべてマップ内に ---- */
+#playScreen.screen.active {
+  display: block;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+#playScreen .play-scene { display: block; }
+
+#playScreen .walk-wrap {
+  flex: none;
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+  max-height: none;
+  border: none;
+  background: #000;
+}
+
+/* マップ上部HUD（シーン名・話者） */
+.map-hud-top {
+  position: absolute;
+  top: 52px;
+  left: 0;
+  right: 0;
+  z-index: 6;
+  display: flex;
+  gap: 14px;
+  justify-content: center;
+  align-items: baseline;
+  flex-wrap: wrap;
+  padding: 0 16px;
+  pointer-events: none;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+  text-shadow: 2px 2px 0 #000;
+}
+
+.map-hud-top #sceneNo { color: var(--ember); }
+.map-hud-top #speaker { color: var(--cream); }
+
+/* 質問ダイアログ：マップ下に重なる（ビューポート固定ではない） */
+.question-pane:not([hidden]) {
+  position: absolute;
+  z-index: 10;
+  max-height: 62%;
+  max-height: 62dvh;
+}
+
+.touch-pad { z-index: 5; }
+
+@media (max-width: 700px) {
+  .map-hud-top { top: 48px; font-size: 10px; gap: 8px; }
+  .question-pane:not([hidden]) { max-height: 70%; max-height: 70dvh; }
+}

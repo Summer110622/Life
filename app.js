@@ -85,6 +85,13 @@ function syncWalk() {
   const s = sceneOf(state.index);
   const done = [0, 1, 2].filter(slot => state.answers[s * 3 + slot] !== undefined && (s * 3 + slot) < questions.length);
   const slot = state.answers[state.index] === undefined ? slotOf(state.index) : -1;
+  const q = questions[state.index];
+  if (q) {
+    $('#sceneNo').textContent = q.scene;
+    $('#sceneName').textContent = q.name;
+    const ci = npcCharOf(s), person = characters[ci < 0 ? 0 : ci];
+    $('#speaker').textContent = person.name + ' / ' + person.role;
+  }
   walk.goScene(s, slot, done);
   if (walkScene !== s) showSceneCard(s);
   walkScene = s;
@@ -528,7 +535,8 @@ function renderQuestion() {
   const q = questions[state.index];
   $('#sceneNo').textContent = q.scene;
   $('#sceneName').textContent = q.name;
-  $('#sceneNote').textContent = q.note;
+  const sn = $('#sceneNote');
+  if (sn) sn.textContent = q.note;
   $('#questionKicker').textContent = q.kicker;
   typewrite($('#questionTitle'), q.title);
   $('#questionSub').textContent = q.sub;
