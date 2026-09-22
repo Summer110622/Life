@@ -13,9 +13,11 @@ function setModelState(s) {
   document.body.dataset.lfm = s;
 }
 // LFM必須ゲート：READYになるまで待つ。失敗時はfalseで復帰する
-function ensureModel() {
-  if (modelState === 'ready') return Promise.resolve(true);
-  if (modelState !== 'loading') loadModel();
+async function ensureModel() {
+  if (modelState === 'ready') return true;
+  if (modelState !== 'loading') await loadModel();
+  if (modelState === 'ready') return true;
+  if (modelState !== 'loading') return false; // 即失敗時は待たずに復帰
   return new Promise(res => readyWaiters.push(res));
 }
 function settleWaiters(ok) {
@@ -580,15 +582,19 @@ function startNew() {
 $('#startAiBtn').onclick = async () => {
   const btn = $('#startAiBtn');
   btn.disabled = true; btn.textContent = 'LFM読込中…';
-  if (await ensureModel()) startNew();
-  // 失敗時は modelFailure がボタンを戻す
+  let ok = false;
+  try { ok = await ensureModel(); } catch { ok = false; }
+  if (ok) startNew();
+  else if (modelState !== 'loading') { btn.disabled = false; btn.textContent = 'LFMで旅をはじめる'; }
+  // 失敗時は modelFailure が再試行ボタンを出す
 };
 $('#resumeBtn').hidden = !state.answers.length;
 $('#resumeBtn').onclick = async () => {
   if (state.completed) { renderResult(); return; }
   const btn = $('#resumeBtn'), label = btn.textContent;
   btn.disabled = true; btn.textContent = 'LFM読込中…';
-  const ok = await ensureModel();
+  let ok = false;
+  try { ok = await ensureModel(); } catch { ok = false; }
   btn.disabled = false; btn.textContent = label;
   if (ok) { show('play'); ensureWalk(); syncWalk(); animate(); startBgm(); }
 };
