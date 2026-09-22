@@ -527,7 +527,8 @@ async function loadModel() {
   $('#startAiBtn').disabled = true; $('#cancelModelBtn').hidden = false;
   setStatus('WebGPUを確認しています');
   if (!isSecureContext || !navigator.gpu) {
-    modelFailure('この環境ではWebGPUが利用できません。HTTPS対応のChrome / Edge等でお試しください');
+    const extra = await gpuMissingAdvice();
+    modelFailure('この環境ではWebGPUが利用できません。' + extra);
     return false;
   }
   try {
@@ -718,9 +719,18 @@ window.addEventListener('pagehide', () => { requestId++; stopAnimation(); dispos
 setStatus('LFM2-350M / 未読込');
 syncSound();
 // 起動時の環境表示：WebGPU不可なら最初から理由を示す
+async function isBrave() {
+  try { return !!(navigator.brave && (await navigator.brave.isBrave())); } catch { return false; }
+}
+async function gpuMissingAdvice() {
+  if (await isBrave()) return 'Braveの場合は：①アドレスバーのライオン→このサイトのShieldsをOFF ②設定→システム→ハードウェアアクセラレーションをON ③Braveを再起動';
+  return 'Chrome/Edge等の対応ブラウザでお試しください';
+}
 (function () {
   if (window.isSecureContext && navigator.gpu) return;
-  setStatus('このブラウザ・環境ではWebGPUが使えません。Chrome/Edge等の対応ブラウザでお試しください');
+  gpuMissingAdvice().then(extra => {
+    setStatus('このブラウザ・環境ではWebGPUが使えません。' + extra);
+  });
 })();
 // 診断用フック（コンソールで __ember() と呼ぶと状態が分かります）
 window.__ember = () => ({ screen, modelState, lastModelError, progress: state.answers.length + '/' + questions.length });
