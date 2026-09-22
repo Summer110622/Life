@@ -254,6 +254,11 @@ body.playing textarea {
   padding: 6px 8px;
 }
 
+/* LFM状態チップ：緑=生成可・橙=読込中・赤=不可 */
+body[data-lfm="ready"] #walkStatus { border-color: #7dd87d; color: #bff0bf; }
+body[data-lfm="loading"] #walkStatus { border-color: var(--ember); color: var(--cream); }
+body[data-lfm="error"] #walkStatus { border-color: #e05a5a; color: #f0b0b0; }
+
 /* 吹き出し：NPC頭上のドットウィンドウ */
 #speechBalloon {
   position: absolute;

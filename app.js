@@ -7,6 +7,11 @@ const SAVE_KEY = 'ember-life-v2';
 let state = loadSave(localStorageSafeGet(SAVE_KEY), questions);
 let screen = 'intro', busy = false, frameTimer = null, transitionTimer = null, frame = 0;
 let worker = null, modelState = 'idle', modelTimer = null, generating = false, requestId = 0;
+let lastModelError = '';
+function setModelState(s) {
+  modelState = s;
+  document.body.dataset.lfm = s;
+}
 let report = '', hasSavedReport = false;
 let walk = null, dialogueOpen = false, walkScene = -1;
 // ---- NPC会話AI ----
@@ -322,7 +327,7 @@ function showNpcComment(answerLabel, reason, done) {
     clearTimeout(chatTimer); clearTimeout(commentTimer);
     chatTimer = setTimeout(() => {
       if (!commentMode) return;
-      setBalloon(who, pickAck(c));
+      setBalloon(who, 'LFMの生成が時間切れになりました。次の回答で再試行します');
       commentTimer = setTimeout(finishComment, 2200);
     }, 15000);
     worker.postMessage({ type: 'generate', id: chatReqId, messages: buildNpcPrompt({
@@ -342,9 +347,11 @@ function showNpcComment(answerLabel, reason, done) {
     clearTimeout(commentTimer);
     commentTimer = setTimeout(finishComment, 4000);
   } else {
-    setBalloon(who, pickAck(c));
+    // 定型相づちは使わない。LFM不可の理由を示して進む
+    if (modelState === 'idle' || modelState === 'loading') loadModel();
+    setBalloon(who, 'LFMが使えません（' + (lastModelError || 'WebGPU対応端末でお試しください') + '）。NPCカードの[LFMを読み込む]で再試行できます');
     clearTimeout(commentTimer);
-    commentTimer = setTimeout(finishComment, 2600);
+    commentTimer = setTimeout(finishComment, 3500);
   }
 }
 function animate() {
@@ -393,7 +400,7 @@ function disposeWorker() {
   $('#aiOutput').setAttribute('aria-busy', 'false');
 }
 function modelFailure(message) {
-  disposeWorker(); modelState = 'error';
+  disposeWorker(); lastModelError = message; setModelState('error');
   setStatus(message);
   $('#aiStatus').textContent = message + '。再試行できます。通常のゲーム進行には影響しません。';
   $('#generateBtn').textContent = 'LFMを再読み込みして生成';
@@ -439,7 +446,7 @@ function createModelWorker() {
         }
         if (commentMode) {
           const c = curNpc();
-          setBalloon(c ? c.name : 'トワ', pickAck(c));
+          setBalloon(c ? c.name : 'トワ', 'LFM生成に失敗しました。次の回答で再試行します');
           clearTimeout(commentTimer);
           commentTimer = setTimeout(finishComment, 2200);
           return;
@@ -457,7 +464,7 @@ function createModelWorker() {
       $('#aiStatus').textContent = $('#modelMessage').textContent;
     }
     if (data.type === 'ready') {
-      clearTimeout(modelTimer); modelState = 'ready';
+      clearTimeout(modelTimer); setModelState('ready');
       setStatus('LFM2-350M · WebGPU READY');
       $('#cancelModelBtn').hidden = true;
       $('#startAiBtn').disabled = false;
@@ -488,7 +495,7 @@ function createModelWorker() {
 async function loadModel() {
   if (modelState === 'ready') return true;
   if (modelState === 'loading') return false;
-  modelState = 'loading';
+  setModelState('loading');
   $('#startAiBtn').disabled = true; $('#cancelModelBtn').hidden = false;
   setStatus('WebGPUを確認しています');
   if (!isSecureContext || !navigator.gpu) {
@@ -505,7 +512,7 @@ async function loadModel() {
   } catch { modelFailure('GPUを取得できません。対応端末でお試しください'); return false; }
 }
 $('#cancelModelBtn').onclick = () => {
-  requestId++; disposeWorker(); modelState = 'idle';
+  requestId++; disposeWorker(); setModelState('idle');
   clearTimeout(chatTimer); chatBusy = false; chatDraft = ''; abortComment(); clearAmbient();
   setStatus('LFMを停止しました');
   if (!hasSavedReport) { report = ''; $('#aiOutput').textContent = '生成は完了していません。'; }
@@ -646,7 +653,7 @@ async function generateReport() {
 }
 $('#generateBtn').onclick = generateReport;
 $('#restartBtn').onclick = () => {
-  if (generating || modelState === 'loading') { requestId++; disposeWorker(); modelState = 'idle'; setStatus('LFM未読込'); }
+  if (generating || modelState === 'loading') { requestId++; disposeWorker(); setModelState('idle'); setStatus('LFM未読込'); }
   clearTimeout(chatTimer); chatBusy = false; closeNpc(); abortComment(); clearAmbient();
   show('intro'); stopAnimation(); $('#resumeBtn').hidden = false; $('#resumeBtn').textContent = '今の結果を見る';
 };
@@ -659,12 +666,12 @@ $('#exportBtn').onclick = () => {
 $('#eraseBtn').onclick = () => {
   if (!confirm('この端末に保存した回答と手紙を削除しますか？')) return;
   try { localStorage.removeItem(SAVE_KEY); } catch {}
-  requestId++; disposeWorker(); modelState = 'idle';
+  requestId++; disposeWorker(); setModelState('idle');
   clearTimeout(chatTimer); chatBusy = false; closeNpc(); abortComment(); clearAmbient(); stopType();
   state = { version:2, index:0, answers:[], reasons:[], completed:false, report:'' };
   report = ''; hasSavedReport = false; show('intro'); stopAnimation(); $('#resumeBtn').hidden = true; setStatus('保存した旅の記録を削除しました');
 };
-window.addEventListener('pagehide', () => { requestId++; stopAnimation(); disposeWorker(); modelState = 'idle'; });
+window.addEventListener('pagehide', () => { requestId++; stopAnimation(); disposeWorker(); setModelState('idle'); });
 setStatus('LFM2-350M / 未読込');
 syncSound();
 // NPC会話UIの配線
