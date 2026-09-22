@@ -1,0 +1,692 @@
+/* EMBER 歩行モード：ゲーム画面・ドット絵の解像感・ダイアログ */
+
+.play-screen {
+  gap: 20px;
+}
+
+.walk-wrap {
+  position: relative;
+  border: 1px solid #493537;
+  background: #0d0a0d;
+  box-shadow: 0 25px 80px #060508aa;
+  overflow: hidden;
+  /* 16:9 を維持しつつ横幅いっぱい */
+  aspect-ratio: 16 / 9;
+  max-height: 52vh;
+}
+
+#walkCanvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  /* ドット絵を潰さない拡大 */
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  touch-action: none;
+  cursor: crosshair;
+}
+
+/* 走査線＋ビネットでゲーム画面らしく */
+.walk-wrap::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    repeating-linear-gradient(0deg, rgba(0,0,0,0.12) 0 1px, transparent 1px 3px),
+    radial-gradient(ellipse at center, transparent 55%, rgba(5,3,4,0.55) 100%);
+}
+
+/* タッチ操作 */
+.touch-pad {
+  position: absolute;
+  inset: auto 0 0 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  padding: 10px 12px;
+  pointer-events: none;
+}
+
+.dpad {
+  display: grid;
+  grid-template-columns: repeat(3, 40px);
+  grid-template-rows: repeat(3, 36px);
+  gap: 2px;
+  pointer-events: auto;
+  opacity: 0.9;
+}
+
+.dpad button {
+  border: 1px solid #5a3a38;
+  background: rgba(18, 15, 18, 0.72);
+  color: var(--cream);
+  font-size: 14px;
+  min-height: 0;
+  backdrop-filter: blur(4px);
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.dpad button:active {
+  background: var(--ember);
+  color: #1a1111;
+}
+
+.dpad .spacer { visibility: hidden; }
+
+.talk-btn {
+  pointer-events: auto;
+  border: 1px solid var(--ember);
+  background: rgba(240, 139, 81, 0.92);
+  color: #1a1111;
+  font-weight: 700;
+  font-size: 13px;
+  padding: 12px 20px;
+  letter-spacing: 0.08em;
+}
+
+/* 質問ダイアログ：RPGのウィンドウ風ボトムシート */
+.question-pane {
+  border: 1px solid var(--ember);
+  background: rgba(16, 12, 14, 0.97);
+  box-shadow: 0 -12px 60px rgba(0, 0, 0, 0.6);
+  padding: 22px clamp(16px, 3vw, 32px);
+}
+
+.question-pane[hidden] { display: none; }
+
+.question-pane.dialogue-open {
+  animation: dialogue-in 0.22s ease-out;
+}
+
+@keyframes dialogue-in {
+  from { transform: translateY(14px); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+
+@media (min-width: 1024px) {
+  /* PCではマップとダイアログを横並びにせず縦積み：マップを主役に */
+  .play-screen.screen.active { display: block; }
+  .walk-wrap { max-height: 56vh; }
+  .touch-pad { display: none; } /* PCはキーボード誘導 */
+}
+
+@media (max-width: 820px) {
+  .walk-wrap { max-height: 38vh; }
+  .dpad { grid-template-columns: repeat(3, 44px); grid-template-rows: repeat(3, 40px); }
+}
+
+/* ---- 全画面ゲーム：マップが画面いっぱいに広がる ---- */
+#playScreen.screen.active {
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100vh - 128px);
+  min-height: calc(100dvh - 128px);
+}
+
+#playScreen .play-scene {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+#playScreen .scene-label {
+  padding: 10px clamp(12px, 3vw, 32px) 6px;
+}
+
+#playScreen .speaker,
+#playScreen .character-note {
+  padding-left: clamp(12px, 3vw, 32px);
+  padding-right: clamp(12px, 3vw, 32px);
+}
+
+#playScreen .character-note { margin-bottom: 10px; }
+
+#playScreen .walk-wrap {
+  flex: 1;
+  min-height: 320px;
+  height: auto;
+  aspect-ratio: auto;
+  max-height: none;
+  border-left: none;
+  border-right: none;
+}
+
+#walkCanvas {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #0d0a0d;
+}
+
+/* 全画面トグル：マップ右上のフローティングボタン */
+.fs-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 5;
+  border: 1px solid #5a3a38;
+  background: rgba(18, 15, 18, 0.72);
+  color: var(--cream);
+  font-size: 12px;
+  padding: 8px 12px;
+  backdrop-filter: blur(4px);
+}
+
+.fs-btn:active { background: var(--ember); color: #1a1111; }
+
+/* 質問ダイアログ：画面下に重なるボトムシート */
+.question-pane:not([hidden]) {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 60;
+  max-height: 72vh;
+  max-height: 72dvh;
+  overflow-y: auto;
+  border-left: none;
+  border-right: none;
+  border-bottom: none;
+  margin: 0;
+}
+
+@media (min-width: 1024px) {
+  #playScreen.screen.active { display: flex; }
+  #playScreen .walk-wrap { max-height: none; }
+}
+
+/* ---- GAME MODE：Webの皮を脱ぐ ---- */
+/* プレイ中はサイトのヘッダ・フッタを消し、画面全体をゲームにする */
+body.playing .topbar,
+body.playing .footer { display: none; }
+
+body.playing #playScreen.screen.active {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+body.playing {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+body.playing input,
+body.playing textarea {
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+/* システムHUD（左上）：音量＋LFM状態のドット表示 */
+.sys-hud {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sys-hud button {
+  width: 34px;
+  height: 34px;
+  border: 2px solid var(--cream);
+  outline: 2px solid #000;
+  background: rgba(10, 8, 10, 0.8);
+  color: var(--cream);
+  font-size: 15px;
+  padding: 0;
+}
+
+#walkStatus {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--cream);
+  background: rgba(10, 8, 10, 0.8);
+  border: 1px solid #5a3a38;
+  padding: 6px 8px;
+}
+
+/* 吹き出し：NPC頭上のドットウィンドウ */
+#speechBalloon {
+  position: absolute;
+  z-index: 7;
+  transform: translate(-50%, -115%);
+  max-width: min(300px, 70%);
+  background: #0f0c0e;
+  border: 2px solid var(--cream);
+  outline: 2px solid #000;
+  box-shadow: 4px 4px 0 #000;
+  padding: 8px 10px;
+  font-size: 12px;
+  line-height: 1.7;
+  pointer-events: none;
+}
+
+#speechBalloon[hidden] { display: none; }
+
+#speechBalloon b {
+  display: block;
+  color: var(--ember);
+  font-size: 10px;
+  letter-spacing: 0.15em;
+  margin-bottom: 2px;
+}
+
+#speechBalloon::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -9px;
+  width: 12px;
+  height: 12px;
+  background: #0f0c0e;
+  border-right: 2px solid var(--cream);
+  border-bottom: 2px solid var(--cream);
+  transform: translateX(-50%) rotate(45deg);
+}
+
+/* 話しかけるボタン：ゲームコマンド風 */
+#npcBtn {
+  position: absolute;
+  right: 12px;
+  bottom: 86px;
+  z-index: 6;
+  border: 2px solid var(--ember);
+  outline: 2px solid #000;
+  background: rgba(240, 139, 81, 0.95);
+  color: #1a1111;
+  font-weight: 700;
+  font-size: 13px;
+  padding: 10px 16px;
+  box-shadow: 4px 4px 0 #000;
+}
+
+#npcBtn[hidden] { display: none; }
+
+#npcBtn:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 #000; }
+
+/* NPC会話カード：RPGの会話ウィンドウ */
+#npcCard {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 76px;
+  z-index: 8;
+  background: rgba(13, 10, 12, 0.97);
+  border: 2px solid var(--cream);
+  outline: 2px solid #000;
+  box-shadow: 6px 6px 0 #000;
+  padding: 12px 14px;
+}
+
+#npcCard[hidden] { display: none; }
+
+.npc-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.npc-head b { color: var(--ember); font-size: 12px; letter-spacing: 0.1em; }
+
+#npcModel { font-size: 10px; color: var(--muted); flex: 1; }
+
+#npcClose {
+  border: 2px solid #5a3a38;
+  background: transparent;
+  color: var(--cream);
+  font-size: 11px;
+  padding: 6px 10px;
+}
+
+.npc-log {
+  max-height: 132px;
+  overflow-y: auto;
+  font-size: 12px;
+  line-height: 1.9;
+  margin-bottom: 10px;
+  padding: 6px 8px;
+  background: #0a080a;
+  border: 1px solid #3a2b2c;
+}
+
+.npc-line.npc { color: #ebd6c5; }
+.npc-line.npc::before { content: "▶ "; color: var(--ember); }
+.npc-line.you { color: #9fd0ff; }
+.npc-line.streaming::after { content: "▌"; animation: blink 1s steps(1) infinite; }
+
+.npc-row { display: flex; gap: 8px; margin-top: 8px; }
+
+.npc-row input {
+  flex: 1;
+  min-width: 0;
+  background: #0a080a;
+  border: 2px solid #5a3a38;
+  color: var(--ink);
+  font: inherit;
+  font-size: 12px;
+  padding: 8px 10px;
+}
+
+.npc-row button {
+  border: 2px solid var(--ember);
+  outline: 2px solid #000;
+  background: var(--ember);
+  color: #1a1111;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 8px 12px;
+  white-space: nowrap;
+}
+
+.npc-row button:disabled { opacity: 0.5; }
+
+#npcNudge, #npcLoad {
+  background: transparent;
+  color: var(--cream);
+  border-color: #5a3a38;
+  font-weight: 400;
+}
+
+/* 質問ダイアログ：RPGの選択肢ウィンドウ */
+.question-pane.dialogue-open {
+  background: rgba(13, 10, 12, 0.98);
+  border: 2px solid var(--cream);
+  outline: 2px solid #000;
+  box-shadow: 0 -6px 0 #000;
+}
+
+.dlg-head { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; }
+
+#dlgPortrait {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  image-rendering: pixelated;
+  background: #0a080a;
+  border: 2px solid #5a3a38;
+  flex: none;
+}
+
+#questionTitle.typing::after {
+  content: "▌";
+  color: var(--ember);
+  animation: blink 1s steps(1) infinite;
+}
+
+@keyframes blink { 50% { opacity: 0; } }
+
+/* 回答＝ゲームのコマンドメニュー */
+.answers { display: grid; gap: 6px; }
+
+.answer-btn {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  text-align: left;
+  background: transparent;
+  border: 2px solid transparent;
+  border-left-width: 6px;
+  text-decoration: none;
+  padding: 10px 12px;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.answer-btn .answer-key {
+  color: var(--ember);
+  font-weight: 700;
+  flex: none;
+}
+
+.answer-btn:hover:not(:disabled),
+.answer-btn:focus-visible {
+  background: #2c1a16;
+  border-left-color: var(--ember);
+  outline: none;
+}
+
+.answer-btn:hover:not(:disabled)::before { content: "▶"; color: var(--ember); }
+
+.answer-btn.chosen {
+  background: #3a2220;
+  border-color: var(--ember);
+  border-left-width: 6px;
+}
+
+.answer-btn:disabled:not(.chosen) { opacity: 0.45; }
+
+/* 理由入力＝ゲームのメモ欄 */
+#questionPane textarea {
+  background: #0a080a;
+  border: 2px solid #3a2b2c;
+}
+
+#questionPane textarea:focus { border-color: var(--ember); outline: none; }
+
+/* ドット絵ボタンの立体感 */
+.primary-btn, .talk-btn {
+  border: 2px solid #000;
+  outline: 2px solid var(--ember);
+  box-shadow: 4px 4px 0 #000;
+}
+
+.primary-btn:active, .talk-btn:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 #000; }
+
+/* 結果画面もゲームの額縁に */
+.result-top, .ai-letter, .factor-card, .memo-card {
+  border: 2px solid #3a2b2c;
+  box-shadow: 4px 4px 0 #000;
+}
+
+/* タイトル画面：PRESS START の点滅 */
+#startAiBtn { position: relative; }
+
+.hero-meta { position: relative; }
+
+/* タイトル画面：最初から大画面のゲームタイトル */
+body.title .topbar,
+body.title .footer { display: none; }
+
+body.title {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.sys-hud.fixed { position: fixed; top: 12px; left: 12px; z-index: 50; }
+
+#introScreen.screen.active {
+  max-width: none;
+  margin: 0;
+  padding: clamp(24px, 5vh, 64px) clamp(16px, 4vw, 48px);
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    linear-gradient(180deg, rgba(10, 7, 9, 0.55) 0%, rgba(10, 7, 9, 0.25) 40%, rgba(10, 7, 9, 0.88) 100%),
+    url("assets/scene-01.png") center / cover no-repeat,
+    #120f12;
+}
+
+#introScreen .hero-copy {
+  max-width: 860px;
+  margin: 0 auto;
+  text-align: center;
+  text-shadow: 2px 2px 0 #000;
+}
+
+#introScreen .hero-figure { display: none; }
+
+#introScreen.hero {
+  grid-template-columns: 1fr;
+  width: min(1100px, 100%);
+  gap: 0;
+}
+
+#introScreen h1 {
+  font-size: clamp(44px, 9vw, 110px);
+  line-height: 1.15;
+  text-shadow: 3px 3px 0 #000, 0 0 42px rgba(240, 139, 81, 0.35);
+}
+
+#introScreen .lede { margin-left: auto; margin-right: auto; font-size: clamp(12px, 1.6vw, 15px); }
+
+#introScreen .hero-meta { justify-content: center; }
+
+#introScreen .secondary-actions { justify-content: center; }
+
+#introScreen .primary-btn {
+  font-size: 15px;
+  padding: 18px 34px;
+}
+
+#introScreen .hint { margin-left: auto; margin-right: auto; }
+
+.press-start {
+  margin: 26px 0 0;
+  color: var(--cream);
+  font-size: 13px;
+  letter-spacing: 0.35em;
+  animation: blink 1.2s steps(1) infinite;
+  text-shadow: 2px 2px 0 #000;
+}
+
+@media (max-width: 820px) {
+  #introScreen h1 { font-size: clamp(38px, 12vw, 64px); }
+  #introScreen.screen.active { padding: 48px 16px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .press-start { animation: none; }
+}
+
+/* タイトル：哲学的名言 */
+.title-quote {
+  min-height: 2.2em;
+  margin: 0 0 18px;
+  color: var(--cream);
+  font-family: "DotGothic16", sans-serif;
+  font-size: clamp(15px, 2.2vw, 22px);
+  letter-spacing: 0.12em;
+  opacity: 0;
+  transition: opacity 0.45s ease;
+  text-shadow: 2px 2px 0 #000;
+}
+
+.title-quote.show { opacity: 1; }
+
+/* タイトル背景の緩やかなパン（Ken Burns） */
+body.title #introScreen.screen.active {
+  animation: titlepan 36s ease-in-out infinite alternate;
+}
+
+@keyframes titlepan {
+  from { background-position: center, 30% center; }
+  to { background-position: center, 70% center; }
+}
+
+/* 残火パーティクル */
+#introScreen { position: relative; overflow: hidden; }
+
+.embers { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+
+.embers i {
+  position: absolute;
+  bottom: -12px;
+  width: 4px;
+  height: 4px;
+  background: var(--ember);
+  border-radius: 50%;
+  box-shadow: 0 0 8px var(--ember);
+  opacity: 0;
+  animation: rise linear infinite;
+}
+
+.embers i:nth-child(1) { left: 8%; animation-duration: 11s; animation-delay: 0s; }
+.embers i:nth-child(2) { left: 18%; animation-duration: 14s; animation-delay: 2s; width: 3px; height: 3px; }
+.embers i:nth-child(3) { left: 29%; animation-duration: 10s; animation-delay: 5s; }
+.embers i:nth-child(4) { left: 41%; animation-duration: 13s; animation-delay: 1s; width: 5px; height: 5px; }
+.embers i:nth-child(5) { left: 52%; animation-duration: 12s; animation-delay: 4s; width: 3px; height: 3px; }
+.embers i:nth-child(6) { left: 63%; animation-duration: 15s; animation-delay: 0.5s; }
+.embers i:nth-child(7) { left: 72%; animation-duration: 11s; animation-delay: 3s; width: 3px; height: 3px; }
+.embers i:nth-child(8) { left: 83%; animation-duration: 13s; animation-delay: 6s; }
+.embers i:nth-child(9) { left: 91%; animation-duration: 10s; animation-delay: 2.5s; width: 5px; height: 5px; }
+.embers i:nth-child(10) { left: 96%; animation-duration: 14s; animation-delay: 7s; width: 3px; height: 3px; }
+
+@keyframes rise {
+  0% { transform: translateY(0) translateX(0); opacity: 0; }
+  12% { opacity: 0.9; }
+  100% { transform: translateY(-72vh) translateX(24px); opacity: 0; }
+}
+
+/* シーンカード：入場時の哲学的幕間 */
+#sceneCard {
+  position: absolute;
+  inset: 0;
+  z-index: 9;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  text-align: center;
+  padding: 24px;
+  background: rgba(8, 6, 8, 0.78);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.5s ease;
+}
+
+#sceneCard[hidden] { display: none; }
+#sceneCard.show { opacity: 1; }
+
+#sceneCardNo {
+  color: var(--ember);
+  font-size: 12px;
+  letter-spacing: 0.4em;
+}
+
+#sceneCardName {
+  font-family: "DotGothic16", sans-serif;
+  font-weight: 400;
+  font-size: clamp(28px, 5vw, 54px);
+  letter-spacing: 0.1em;
+  color: var(--ink);
+  text-shadow: 3px 3px 0 #000;
+}
+
+#sceneCardLine {
+  margin: 6px 0 0;
+  color: var(--cream);
+  font-size: clamp(12px, 1.8vw, 17px);
+  letter-spacing: 0.08em;
+  line-height: 2;
+  text-shadow: 2px 2px 0 #000;
+}
+
+/* 結果の締めの言葉 */
+.result-phil {
+  margin-top: 14px;
+  color: var(--cream);
+  font-family: "DotGothic16", sans-serif;
+  font-size: clamp(14px, 2vw, 19px);
+  letter-spacing: 0.06em;
+  line-height: 2;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.title #introScreen.screen.active, .embers i { animation: none; }
+  .embers { display: none; }
+  #sceneCard { transition: none; }
+}

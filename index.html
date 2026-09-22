@@ -10,8 +10,9 @@
   <link href="https://fonts.googleapis.com/css2?family=DotGothic16&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css" />
   <link rel="stylesheet" href="enhancements.css" />
+  <link rel="stylesheet" href="walk.css" />
 </head>
-<body>
+<body class="title">
   <div class="app-shell">
     <header class="topbar">
       <div class="brand"><span class="brand-mark">◆</span><span>EMBER</span><small>深層性格診断</small></div>
@@ -20,14 +21,18 @@
 
     <main>
       <section class="hero screen active" id="introScreen" aria-labelledby="introTitle">
+        <div class="sys-hud fixed"><button type="button" id="titleSoundBtn" aria-label="BGMの再生・停止">♪</button></div>
         <div class="hero-copy">
           <p class="eyebrow">LIQUID AI / LFM2 × WEBGPU</p>
           <h1 id="introTitle">あなたが選ばなかった<br><em>道</em>を、診断する。</h1>
-          <p class="lede">記憶を失ったロボット「トワ」と、夕暮れの町へ。12の場面で選ぶ言葉が、あなただけの旅になる。最後にLFMが、あなたの選択から一通の手紙を書きます。</p>
-          <div class="hero-meta"><span>12 SCENES</span><span>ON-DEVICE AI</span><span>約 7–15 分</span></div>
+          <p id="titleQuote" class="title-quote"></p>
+          <p class="lede">記憶を失ったロボット「トワ」と、夕暮れの町へ。18の場面で選ぶ言葉が、あなただけの旅になる。最後にLFMが、あなたの選択から一通の手紙を書きます。</p>
+          <div class="hero-meta"><span>18 SCENES</span><span>ON-DEVICE AI</span><span>約 10–20 分</span></div>
           <button class="primary-btn" id="startAiBtn" type="button">LFMで旅をはじめる →</button>
           <div class="secondary-actions"><button class="ghost-btn" id="startBtn" type="button">モデルを読まず、先に遊ぶ</button><button class="ghost-btn" id="resumeBtn" type="button" hidden>つづきから</button></div>
-          <p class="hint">初回は数百MB規模のモデルを取得します。WebGPU対応端末・HTTPSが必要です。生成は端末内で行い、回答は外部に送信しません。AIなしでも物語は遊べます。</p>
+          <p class="press-start" aria-hidden="true">— PRESS ENTER —</p>
+          <div class="embers" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+          <p class="hint">旅を始めるとLFMの読み込みも裏で始まります。準備でき次第、NPCの会話と回答への寸評は毎回AI生成になります。生成は端末内で行い、回答は外部に送信しません。旅を始めると音楽が流れます（♪ボタンで停止できます）。</p>
           <p class="model-message" id="modelMessage" role="status"></p>
           <p class="hint">娯楽と自己対話のための作品です。医学的・心理学的な診断ではありません。</p>
         </div>
@@ -41,13 +46,34 @@
       <section class="play-screen screen" id="playScreen" aria-labelledby="questionTitle">
         <div class="play-scene">
           <div class="scene-label"><span id="sceneNo">SCENE 01</span><span id="sceneName">入口 / THE GATE</span></div>
-          <div class="scene-window"><div class="walkway"></div><div class="play-robot" id="playRobot" role="img" aria-label="よろよろと歩くロボットのトワ"></div><img id="npc" class="npc" alt="" hidden><div class="scene-vignette"></div></div>
+          <div class="walk-wrap">
+            <canvas id="walkCanvas" width="960" height="540" aria-label="歩き回れるマップ。WASD・矢印キーで移動、Eキーで話す"></canvas>
+            <button type="button" class="fs-btn" id="fsBtn" aria-label="全画面切り替え">⛶ 全画面</button>
+            <div class="sys-hud"><button type="button" id="gameSoundBtn" aria-label="BGMの再生・停止">♪</button><span id="walkStatus" role="status">LFM / 未読込</span></div>
+            <div id="speechBalloon" hidden><b id="balloonName"></b><span id="balloonText"></span></div>
+            <button type="button" id="npcBtn" hidden>話しかける T</button>
+            <div id="npcCard" hidden>
+              <div class="npc-head"><b id="npcName"></b><span id="npcModel"></span><button type="button" id="npcClose">去る ✕</button></div>
+              <div id="npcLog" class="npc-log" aria-live="polite"></div>
+              <div class="npc-row"><input id="npcInput" maxlength="120" placeholder="トワとして話しかける…" autocomplete="off"><button type="button" id="npcSend">送る</button></div>
+              <div class="npc-row"><button type="button" id="npcNudge">もう一言</button><button type="button" id="npcLoad">LFMを読み込む</button></div>
+            </div>
+            <div id="sceneCard" hidden><span id="sceneCardNo"></span><b id="sceneCardName"></b><p id="sceneCardLine"></p></div>
+            <div class="touch-pad">
+              <div class="dpad" role="group" aria-label="移動パッド">
+                <span class="spacer"></span><button type="button" data-dir="up" aria-label="上へ">▲</button><span class="spacer"></span>
+                <button type="button" data-dir="left" aria-label="左へ">◀</button><button type="button" data-dir="down" aria-label="下へ">▼</button><button type="button" data-dir="right" aria-label="右へ">▶</button>
+                <span class="spacer"></span><span class="spacer"></span><span class="spacer"></span>
+              </div>
+              <button type="button" class="talk-btn" id="talkBtn">話す E</button>
+            </div>
+          </div>
           <p id="speaker" class="speaker">トワ / 記憶のない歩行者</p>
-          <div class="character-note"><span class="note-dot"></span><span id="sceneNote">トワは、あなたの返事を待っている。</span></div>
+          <div class="character-note"><span class="note-dot"></span><span id="sceneNote">◆ を目指して歩こう。近づいたら E / タップで話す。</span></div>
         </div>
-        <div class="question-pane">
-          <div class="progress-row"><span id="questionCount">01 / 12</span><div class="progress-track"><i id="progressBar"></i></div><span id="depthLabel">DEPTH 01</span></div>
-          <div class="question-kicker" id="questionKicker">最初の印象</div>
+        <div class="question-pane" id="questionPane" hidden>
+          <div class="progress-row"><span id="questionCount">01 / 18</span><div class="progress-track"><i id="progressBar"></i></div><span id="depthLabel">DEPTH 01</span></div>
+          <div class="dlg-head"><img id="dlgPortrait" alt="" width="48" height="48"><div><div class="question-kicker" id="questionKicker">最初の印象</div></div></div>
           <h2 id="questionTitle" tabindex="-1">町に入る前、あなたは何を確認する？</h2>
           <p class="question-sub" id="questionSub">考えすぎず、いちばん近いものを選んでください。</p>
           <div class="answers" id="answers"></div>
@@ -58,7 +84,7 @@
       </section>
 
       <section class="result-screen screen" id="resultScreen" aria-labelledby="resultTitle">
-        <div class="result-top"><p class="eyebrow">JOURNEY / 12 SCENES</p><h2 id="resultTitle">今の選択が描いた、<br><em id="resultArchetype">静かな観測者</em>。</h2><p id="resultLead"></p><button class="primary-btn" id="restartBtn" type="button">旅の入口へ戻る ↻</button></div>
+        <div class="result-top"><p class="eyebrow">JOURNEY / 18 SCENES</p><h2 id="resultTitle">今の選択が描いた、<br><em id="resultArchetype">静かな観測者</em>。</h2><p id="resultLead"></p><p id="resultPhil" class="result-phil"></p><button class="primary-btn" id="restartBtn" type="button">旅の入口へ戻る ↻</button></div>
         <section class="ai-letter" aria-labelledby="letterTitle"><div class="letter-head"><div><span class="eyebrow">LIQUID FOUNDATION MODEL</span><h3 id="letterTitle">トワから、あなたへの手紙。</h3></div><span class="model-tag">LFM2-350M / q4</span></div><p class="hint" id="aiStatus" role="status">LFM未生成</p><div id="aiOutput" class="ai-output" aria-busy="false"></div><button class="primary-btn" id="generateBtn" type="button">LFMで深く読み解く →</button><p class="hint">初回はモデルを取得します。解釈は仮説であり、正確な人格測定ではありません。</p></section>
         <div class="result-grid"><div class="factor-card"><div class="card-head"><span>選択の傾向</span></div><p class="hint" id="confidence"></p><div id="factorBars"></div><p class="hint">ゲーム独自の加点指標です。LFMの推論や心理検査の点数ではありません。</p></div><div class="memo-card"><div class="card-head"><span>RECOVERED NOTE</span><span>NO. 12</span></div><p id="resultMemo"></p><div class="memo-sign">— EMBER / 旅の余白</div></div></div>
         <details class="journey-log"><summary>選んだ道を振り返る</summary><ol id="answerLog"></ol></details>

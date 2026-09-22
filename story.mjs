@@ -1,27 +1,67 @@
 export const questions = [
-  {scene:'SCENE 01',name:'入口 / THE GATE',note:'トワは、あなたの返事を待っている。',kicker:'最初の印象',title:'町に入る前、あなたは何を確認する？',sub:'考えすぎず、いちばん近いものを選んでください。',answers:[['A','出口の場所。戻れるなら、入ってもいい。',{agency:2,control:2,solitude:1}],['B','誰かがいる気配。ひとりでは入りたくない。',{empathy:2,belonging:2,solitude:-1}],['C','音と匂い。町が何を隠しているか知りたい。',{curiosity:3,agency:1}],['D','トワの残量。歩けるなら、進む。',{resilience:3,control:1}]]},
-  {scene:'SCENE 01',name:'入口 / THE GATE',note:'「正しさ」は、まだ標識になっていない。',kicker:'記憶の端',title:'知らない場所で、古い鍵を見つけた。',sub:'鍵が開くかどうかは、わかりません。',answers:[['A','まずポケットにしまう。必要になる気がする。',{control:2,resilience:1}],['B','地面に戻す。持ち主が探しているかもしれない。',{empathy:3,belonging:1}],['C','試せそうな扉を全部探す。',{curiosity:3,agency:1}],['D','トワに渡す。彼の記憶かもしれない。',{solitude:-1,empathy:2,belonging:1}]]},
-  {scene:'SCENE 02',name:'市場跡 / THE MARKET',note:'人のいない市場にも、値札だけが残っている。',kicker:'交換',title:'喉が渇いた。水は一人分しかない。',sub:'遠くから、別の足音が聞こえます。',answers:[['A','半分を隠す。見つからないようにする。',{control:3,solitude:1}],['B','足音の主を探しにいく。分けられるかもしれない。',{empathy:3,belonging:2}],['C','水を調べる。別の水源を見つける。',{curiosity:2,agency:2}],['D','トワの冷却用に残す。自分は我慢できる。',{resilience:2,empathy:2}]]},
-  {scene:'SCENE 02',name:'市場跡 / THE MARKET',note:'選ばなかった答えも、消えずに積もる。',kicker:'沈黙',title:'ナギが、同じ話を三度した。',sub:'彼はあなたの顔を見て、笑います。',answers:[['A','三度目も初めて聞いたように聞く。',{empathy:3,belonging:1}],['B','話を止めて、別のことを質問する。',{agency:2,control:1}],['C','内容より、繰り返す理由を考える。',{curiosity:3,solitude:1}],['D','自分も同じ話をしている気がする。黙る。',{solitude:3,resilience:1}]]},
-  {scene:'SCENE 03',name:'時計塔 / THE CLOCK',note:'時間は壊れている。だから、急がなくていい。',kicker:'時間',title:'止まった時計を、動かすべきだと思う？',sub:'針を直せば、何かが戻るかもしれません。',answers:[['A','直す。止まったままにしておけない。',{control:3,agency:1}],['B','触らない。止まった時間にも意味がある。',{solitude:2,curiosity:1}],['C','仕組みを分解して理解する。',{curiosity:3,control:1}],['D','みんなに聞いてから決める。',{belonging:3,empathy:1}]]},
-  {scene:'SCENE 03',name:'時計塔 / THE CLOCK',note:'シロは、フードの影で何も言わない。',kicker:'境界線',title:'「見ないで」と言われたものを、見たくなる？',sub:'見れば、相手を傷つけるかもしれません。',answers:[['A','見ない。頼まれたことを守る。',{empathy:2,control:2}],['B','見ないふりをして、気づいていることを伝える。',{empathy:3,agency:1}],['C','なぜ見てはいけないかを聞く。',{curiosity:3}],['D','一度だけ見る。真実を知るほうが大事。',{agency:3,resilience:1}]]},
-  {scene:'SCENE 04',name:'廃駅 / THE STATION',note:'ビットの画面には、意味のない笑顔が浮かんでいる。',kicker:'故障',title:'うまくいかないものを、いつまで直す？',sub:'直すほど、壊れていくようにも見えます。',answers:[['A','動くまで続ける。途中でやめるのは嫌いだ。',{resilience:3,control:1}],['B','誰かに助けを求める。ひとりで抱えない。',{belonging:3,empathy:1}],['C','壊れ方を観察して、別の方法を試す。',{curiosity:3,agency:1}],['D','壊れたままでも進める道を探す。',{agency:2,resilience:2}]]},
-  {scene:'SCENE 04',name:'廃駅 / THE STATION',note:'スイの黒髪が、夕日の端で揺れる。',kicker:'やさしさ',title:'やさしさは、相手のため？ 自分のため？',sub:'どちらか一方でなくても構いません。',answers:[['A','相手が少し楽になるなら、それでいい。',{empathy:3,belonging:1}],['B','自分が後悔しないためでもある。',{agency:2,control:1}],['C','やさしくできる余裕がある自分でいたい。',{resilience:2,control:1}],['D','やさしさの意味を、まだ決めたくない。',{curiosity:2,solitude:2}]]},
-  {scene:'SCENE 05',name:'工場跡 / THE FURNACE',note:'熱のない炉に、名前だけが残っている。',kicker:'重さ',title:'誰かの期待を、どこまで背負う？',sub:'期待は、見えない荷物です。',answers:[['A','持てるだけ持つ。頼られたことを裏切れない。',{empathy:2,resilience:3}],['B','自分の荷物と分けて考える。',{control:3,agency:1}],['C','期待が生まれた理由をたどる。',{curiosity:2,belonging:1}],['D','重いと言う。言葉にすれば変わるかもしれない。',{agency:3,belonging:1}]]},
-  {scene:'SCENE 05',name:'工場跡 / THE FURNACE',note:'トワの胸で、小さな音が続いている。',kicker:'壊れ方',title:'自分が壊れていると気づいたら？',sub:'完全に壊れる前なら、まだ間に合う。',answers:[['A','誰にも言わず、使える部分だけで動く。',{solitude:3,resilience:2}],['B','壊れていることを見せる。直してくれる人を探す。',{belonging:3,empathy:1}],['C','原因を記録する。次に壊れないために。',{control:2,curiosity:2}],['D','壊れたままでも、行きたい場所へ行く。',{agency:3,resilience:2}]]},
-  {scene:'SCENE 06',name:'町外れ / THE EDGE',note:'出口は、入口と同じ形をしていない。',kicker:'選択',title:'帰る場所が、もうないとしたら？',sub:'それでも「帰る」という言葉は残っています。',answers:[['A','新しく帰れる場所を作る。',{agency:3,belonging:2}],['B','誰かの隣に立つ。場所より、人を選ぶ。',{belonging:3,empathy:2}],['C','ひとりで歩き続ける。町の外を見たい。',{curiosity:2,solitude:3}],['D','ここを帰る場所にする。壊れていても。',{resilience:3,control:1}]]},
-  {scene:'SCENE 06',name:'町外れ / THE EDGE',note:'最後の問いだけは、トワがあなたに尋ねる。',kicker:'残響',title:'あなたが最後まで手放さないものは？',sub:'答えは、きっと次の一歩の中にあります。',answers:[['A','自分で決める権利。',{agency:3,control:1}],['B','誰かを思い出せる記憶。',{empathy:2,belonging:2}],['C','まだ知らないものへの好奇心。',{curiosity:3,solitude:1}],['D','何度でも立ち上がる力。',{resilience:3,agency:1}]]}
+  {scene:'SCENE 01',name:'入口 / THE GATE',note:'信じていたものに、最初のひびが入る。',kicker:'亀裂',title:'親しい友人が、あなたのいない場であなたの噂をしていたと知った。',sub:'噂の真偽は、まだ確かめられません。',answers:[['A','本人に直接会って、聞く。',{agency:3}],['B','共通の友人に、まず事情を聞く。',{belonging:2,control:1}],['C','しばらく距離を置き、相手の出方を見る。',{control:2,solitude:2}],['D','自分のどの言動が原因か、思い返す。',{curiosity:2,solitude:1}]]},
+  {scene:'SCENE 01',name:'入口 / THE GATE',note:'既読のまま、時間が止まっている。',kicker:'沈黙',title:'何年も続いた友人から、理由のないまま連絡が途絶えた。',sub:'最後の返事は、既読のまま止まっています。',answers:[['A','何度でも連絡する。諦めない。',{belonging:2,resilience:3}],['B','相手の事情を想像し、静かに待つ。',{empathy:3}],['C','関係の終わりとして受け入れ、整理する。',{agency:2,control:2}],['D','自分が何かしたのだと、自分を責める。',{solitude:3}]]},
+  {scene:'SCENE 01',name:'入口 / THE GATE',note:'優しさの蛇口は、閉め方を教えてくれない。',kicker:'依存',title:'何でも相談してくる友人がいる。頼られるのは嬉しいが、正直しんどい。',sub:'境界を引けば、相手は傷つくかもしれません。',answers:[['A','頼られ続ける。しんどさは飲み込む。',{empathy:2,resilience:2}],['B','境界を引く。付き合い方を見直そうと提案する。',{agency:3,control:2}],['C','相談の量を減らすよう、遠回しに伝える。',{control:2}],['D','自分も相手に依存して返す。持ちつ持たれつにする。',{belonging:3}]]},
+  {scene:'SCENE 02',name:'市場跡 / THE MARKET',note:'祝福と羨望は、同じ口から出る。',kicker:'嫉妬',title:'親友が、あなたがずっと欲しかったものを手に入れた。',sub:'祝いの言葉を、あなたはかけられますか。',answers:[['A','心から祝う。欲しかった気持ちは脇に置く。',{empathy:3,resilience:1}],['B','祝いながら、正直に羨ましいと伝える。',{agency:2,empathy:2}],['C','祝えない自分を認め、少し距離を取る。',{solitude:2,control:2}],['D','自分も同じものを得る方法を探す。',{curiosity:2,agency:2}]]},
+  {scene:'SCENE 02',name:'市場跡 / THE MARKET',note:'秘密は、預けた瞬間に重くなる。',kicker:'秘密',title:'友人が「誰にも言うな」と前置きして、重い秘密を打ち明けた。',sub:'その秘密は、別の友人に関わる内容でした。',answers:[['A','誰にも言わず、墓場まで持っていく。',{control:3,empathy:1}],['B','関わる友人の安全のためなら、秘密を破る。',{empathy:2,agency:2}],['C','重さに耐えきれず、誰かに相談する。',{belonging:2,solitude:1}],['D','打ち明けた本人に、別の対処を提案する。',{agency:2,curiosity:1}]]},
+  {scene:'SCENE 02',name:'市場跡 / THE MARKET',note:'切り取られた幸福は、よく光る。',kicker:'比較',title:'SNSで友人の充実した姿ばかり目に入り、自分が惨めに感じる。',sub:'画面の向こうは、本当の姿ですか。',answers:[['A','SNSから離れる。比べない時間を作る。',{control:3,solitude:1}],['B','正直な気持ちを友人に打ち明ける。',{agency:2,empathy:1}],['C','自分も発信を頑張り、追いつこうとする。',{resilience:2,agency:2}],['D','惨めさを認め、自分の歩幅に戻る。',{solitude:2,curiosity:1}]]},
+  {scene:'SCENE 03',name:'時計塔 / THE CLOCK',note:'輪の中と外を分ける線は、見えない。',kicker:'排除',title:'仲のいい集まりから、自分だけ誘われていないと知った。',sub:'理由を聞ける相手は、います。',answers:[['A','外された理由を、直接たずねる。',{agency:3,control:1}],['B','誘われない集まりからは、自分から離れる。',{control:2,solitude:2}],['C','誰が外したのか、探りを入れる。',{curiosity:3}],['D','気にしないふりをして、これまで通りに振る舞う。',{resilience:2,belonging:1}]]},
+  {scene:'SCENE 03',name:'時計塔 / THE CLOCK',note:'断れない優しさは、いつか音を立てる。',kicker:'境界',title:'疲れているときほど、友人からの頼みを断れない。',sub:'今夜も、無理な頼みが届いています。',answers:[['A','引き受ける。頼られるうちが華だ。',{empathy:2,resilience:2}],['B','断る。自分の限界を言葉にする。',{agency:3,control:2}],['C','条件付きで受ける。できる範囲を示す。',{control:2,agency:1}],['D','断れなかった自分を、後で責める。',{solitude:3}]]},
+  {scene:'SCENE 03',name:'時計塔 / THE CLOCK',note:'中立は、どちらの敵にも見える。',kicker:'板挟み',title:'仲違いした二人の友人が、どちらもあなたを味方に引き入れようとする。',sub:'どちらかを選べば、もう一方を失います。',answers:[['A','どちらにも付かず、中立を貫く。',{control:3}],['B','二人を引き合わせ、仲直りの場を作る。',{agency:2,belonging:2}],['C','より古い付き合いのほうを選ぶ。',{belonging:3}],['D','二人との関係を、一度手放す。',{solitude:3,agency:1}]]},
+  {scene:'SCENE 04',name:'廃駅 / THE STATION',note:'謝罪は、遅れて届くことがある。',kicker:'許し',title:'あなたを深く傷つけた友人が、数年ぶりに謝ってきた。',sub:'謝罪に、嘘はなさそうです。',answers:[['A','許す。関係をやり直す。',{empathy:3,belonging:2}],['B','許すが、以前の距離には戻さない。',{control:3,agency:1}],['C','許せないと伝え、区切りをつける。',{agency:2,solitude:1}],['D','返事を保留する。心の整理が要る。',{solitude:2,curiosity:1}]]},
+  {scene:'SCENE 04',name:'廃駅 / THE STATION',note:'見抜いた瞬間から、あなたも共犯だ。',kicker:'嘘',title:'友人の話に、つじつまの合わない嘘があると気づいた。',sub:'問い詰めれば、関係は壊れるかもしれません。',answers:[['A','嘘を指摘する。真実のほうが大事だ。',{agency:3}],['B','見抜いていながら、泳がせる。',{control:2,curiosity:2}],['C','嘘をつかせた理由を、本人にそっと聞く。',{empathy:3,curiosity:1}],['D','気づかなかったふりをして、忘れる。',{resilience:2,solitude:1}]]},
+  {scene:'SCENE 04',name:'廃駅 / THE STATION',note:'別れは、関係の試金石だ。',kicker:'転機',title:'親友が遠い町へ引っ越す。別れ際に何を渡す？',sub:'言葉でも、品物でも構いません。',answers:[['A','感謝の手紙を渡す。言い残しをなくす。',{empathy:3,belonging:1}],['B','何も渡さない。日常の延長として見送る。',{resilience:2,control:1}],['C','必ず会いに行くと約束する。',{belonging:2,resilience:2}],['D','自分の弱さを見せ、引き留めたい気持ちを伝える。',{solitude:2,empathy:2}]]},
+  {scene:'SCENE 05',name:'工場跡 / THE FURNACE',note:'言い残しのない別れほど、重いものはない。',kicker:'喪失',title:'親しかった人が、もう会えない場所へ行った。',sub:'言い残した言葉は、ありません。',answers:[['A','思い出の品を残し、偲び続ける。',{solitude:2,belonging:2}],['B','会えなかった後悔を、誰かに話す。',{belonging:3,empathy:1}],['C','その人が望んだ生き方を、自分が継ぐ。',{resilience:3,agency:1}],['D','悲しみを記録する。忘れないために。',{curiosity:2,control:1}]]},
+  {scene:'SCENE 05',name:'工場跡 / THE FURNACE',note:'気づいた側が、先に動ける。',kicker:'加害',title:'気づけば、あなたが誰かを傷つける側にいた。',sub:'相手はまだ、何も言っていません。',answers:[['A','先に謝る。言い訳はしない。',{empathy:3,agency:1}],['B','相手の出方を待ち、様子を見る。',{control:2,solitude:1}],['C','なぜそうしたのか、自分の内側を掘る。',{curiosity:3}],['D','償いとして、相手の力になる。',{belonging:2,resilience:2}]]},
+  {scene:'SCENE 05',name:'工場跡 / THE FURNACE',note:'偶然は、試すようにやってくる。',kicker:'再会',title:'あなたを裏切った友人と、偶然再会した。向こうは気づいていない。',sub:'声をかければ、過去が戻ってきます。',answers:[['A','声をかける。過去に向き合う。',{agency:3,resilience:1}],['B','見なかったことにして、立ち去る。',{control:2,solitude:1}],['C','相手の様子をうかがい、今の幸せを確かめる。',{curiosity:3,empathy:1}],['D','心の中で区切りをつけ、前を向く。',{solitude:2,resilience:2}]]},
+  {scene:'SCENE 06',name:'町外れ / THE EDGE',note:'出口は、入口と同じ形をしていない。',kicker:'帰属',title:'帰る場所が、もうないとしたら？',sub:'それでも「帰る」という言葉は残っています。',answers:[['A','新しく帰れる場所を作る。',{agency:3,belonging:2}],['B','誰かの隣に立つ。場所より、人を選ぶ。',{belonging:3,empathy:2}],['C','ひとりで歩き続ける。町の外を見たい。',{curiosity:2,solitude:3}],['D','ここを帰る場所にする。壊れていても。',{resilience:3,control:1}]]},
+  {scene:'SCENE 06',name:'町外れ / THE EDGE',note:'鎧の下の顔を、誰に見せる？',kicker:'弱さ',title:'強がらない自分を、友人に見せられますか？',sub:'見せた先にあるものを、想像してください。',answers:[['A','見せる。弱さも含めて自分だと伝える。',{agency:2,empathy:2}],['B','見せない。心配をかけたくない。',{control:3}],['C','一部の友人にだけ見せる。',{belonging:2,control:1}],['D','見せたいが、まだ怖い。',{solitude:3,curiosity:1}]]},
+  {scene:'SCENE 06',name:'町外れ / THE EDGE',note:'最後の問いだけは、トワがあなたに尋ねる。',kicker:'残響',title:'友情において、あなたが最後まで手放さないものは？',sub:'答えは、きっと次の一歩の中にあります。',answers:[['A','自分で決める権利。',{agency:3,control:1}],['B','誰かを思い出せる記憶。',{empathy:2,belonging:2}],['C','まだ知らないものへの好奇心。',{curiosity:3,solitude:1}],['D','何度でも立ち上がる力。',{resilience:3,agency:1}]]}
 ];
 
 
 export const characters = [
-  { name: 'トワ', file: 'robot-walk-01.png', role: '記憶のない歩行者' },
-  { name: 'ナギ', file: 'grandpa.png', role: '若い、古い背中' },
-  { name: 'シロ', file: 'minimax.png', role: '沈黙をまとう人' },
-  { name: 'ビット', file: 'linux.png', role: '少し抜けた案内人' },
-  { name: 'スイ', file: 'seramu.png', role: '灯りを手渡す人' },
+  { name: 'トワ', file: 'robot-walk-01.png', role: '記憶のない歩行者',
+    persona: '記憶を失ったロボット。たどたどしく、短い言葉で問いかける。',
+    lines: ['……記憶が、まだ見つからない。', '一緒に歩いてくれて、ありがとう。'],
+    ack: ['……わかった。一緒に運ぶよ。', 'ありがとう。その答えを覚えておく。'] },
+  { name: 'ナギ', file: 'grandpa.png', role: '若い、古い背中',
+    persona: '若いのに老人の姿勢をした人物。ゆっくりした口調で、同じ話を繰り返すことがある。市場の記憶を語る。',
+    lines: ['おお、旅の人か。この市場はな、夕方になると値札だけが笑うんだ。', '同じ話を三度したら、三度とも聞いてくれ。頼むよ。', '急がなくていい。時間はとっくに壊れているんだから。'],
+    ack: ['そうか……よく話してくれた。', 'うん、その答えを覚えておくよ。'] },
+  { name: 'シロ', file: 'minimax.png', role: '沈黙をまとう人',
+    persona: '白いフードの人物。口数が少なく、短い言葉で本質を突く。見られたくないものを抱えている。',
+    lines: ['……何も見なかったことにしてくれると助かる。', 'フードの中は、まだ言葉にならない。', '行くなら、時計塔の影を踏むな。'],
+    ack: ['……受け取った。', 'そうか。次へ進め。'] },
+  { name: 'ビット', file: 'linux.png', role: '少し抜けた案内人',
+    persona: 'コンピューター頭のおとぼけな案内人。明るく、少しずれたことを言う。町の仕組みに詳しい。',
+    lines: ['やあやあ！案内人ビット、電池残量42％でお届け！', 'この駅の切符はね、行き先が全部『つづく』なんだ。', '困ったら再起動だよ。人間もたまには、ね。'],
+    ack: ['了解！心のメモリに保存したよ！', 'なるほどなるほど！次に行こう！'] },
+  { name: 'スイ', file: 'seramu.png', role: '灯りを手渡す人',
+    persona: '黒髪・白い服の優しい女の子。灯りを手渡すように励ます。夕日の端に立つ。',
+    lines: ['疲れたら、この灯りを持っていって。', 'あなたの選んだ道、ちゃんと光ってるよ。', '工場の先は暗いけど、朝は来るから。'],
+    ack: ['教えてくれて、ありがとう。', 'うん、ちゃんと届いたよ。'] },
 ];
 export const factorNames = { agency:'自分で決める', control:'境界を守る', curiosity:'未知を探る', empathy:'気持ちを汲む', belonging:'人とつながる', solitude:'内側を見つめる', resilience:'続ける力' };
+// 各シーン入場時の哲学的エピグラフ（シーンカード表示用）
+export const sceneEpigraphs = [
+  '汝自身を知れ — 旅は、問いから始まる。',
+  '与えることと奪うことのあいだに、関係は生まれる。',
+  '時は傷を癒す。だが、問いを消しはしない。',
+  '別れは終わりではない。関係の形を変えることだ。',
+  '壊れたものに宿るのは、記憶という名の火種だ。',
+  '帰る場所とは、人がいる場所のことだ。',
+];
+// 診断結果を締める一言（医学的断定ではなく、余白としての言葉）
+export const archePhil = {
+  agency:'越える自由と、それを引き受ける覚悟は、同じコインの両面だ。',
+  control:'守るとは閉ざすことではない。門の開け方を知ることだ。',
+  curiosity:'問いは答えより長生きする。それでいい。',
+  empathy:'他者を理解するとは、自分を少しだけ手放すことだ。',
+  belonging:'人は一人では灯れない。だから、分け合うのだ。',
+  solitude:'孤独は壁ではない。内側への扉だ。',
+  resilience:'倒れることを許す者だけが、何度でも立ち上がれる。',
+};
 export const archetypes = {
   agency: ['境界を越える人', '誰かの地図だけに頼らず、自分の進む方向を選ぶ場面がありました。自律を守りながら、助けを借りる余地も残せるでしょうか。'],
   control: ['静かな守り手', '安全や境界を確かめる選択が目立ちました。慎重さは大切な資源です。その守りが、望む一歩まで止めていないか確かめてみてください。'],
