@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#120f12" />
+  <title>EMBER / 深層性格診断</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DotGothic16&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="enhancements.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand"><span class="brand-mark">◆</span><span>EMBER</span><small>深層性格診断</small></div>
+      <div class="top-actions"><button class="sound-btn" id="soundBtn" type="button" aria-label="BGMを再生" aria-pressed="false">♪ BGM OFF</button><button class="ghost-btn" id="cancelModelBtn" type="button" hidden>AI処理を停止</button><span class="save-status" id="lfmStatus" role="status">LFM / 未読込</span></div>
+    </header>
+
+    <main>
+      <section class="hero screen active" id="introScreen" aria-labelledby="introTitle">
+        <div class="hero-copy">
+          <p class="eyebrow">LIQUID AI / LFM2 × WEBGPU</p>
+          <h1 id="introTitle">あなたが選ばなかった<br><em>道</em>を、診断する。</h1>
+          <p class="lede">記憶を失ったロボット「トワ」と、夕暮れの町へ。12の場面で選ぶ言葉が、あなただけの旅になる。最後にLFMが、あなたの選択から一通の手紙を書きます。</p>
+          <div class="hero-meta"><span>12 SCENES</span><span>ON-DEVICE AI</span><span>約 7–15 分</span></div>
+          <button class="primary-btn" id="startAiBtn" type="button">LFMで旅をはじめる →</button>
+          <div class="secondary-actions"><button class="ghost-btn" id="startBtn" type="button">モデルを読まず、先に遊ぶ</button><button class="ghost-btn" id="resumeBtn" type="button" hidden>つづきから</button></div>
+          <p class="hint">初回は数百MB規模のモデルを取得します。WebGPU対応端末・HTTPSが必要です。生成は端末内で行い、回答は外部に送信しません。AIなしでも物語は遊べます。</p>
+          <p class="model-message" id="modelMessage" role="status"></p>
+          <p class="hint">娯楽と自己対話のための作品です。医学的・心理学的な診断ではありません。</p>
+        </div>
+        <div class="hero-figure" aria-hidden="true">
+          <div class="sun-glow"></div>
+          <div class="hero-robot" id="heroRobot"></div>
+          <div class="hero-caption"><span>TOWA / 01</span><b>トワ — 記憶のない歩行者</b></div>
+        </div>
+      </section>
+
+      <section class="play-screen screen" id="playScreen" aria-labelledby="questionTitle">
+        <div class="play-scene">
+          <div class="scene-label"><span id="sceneNo">SCENE 01</span><span id="sceneName">入口 / THE GATE</span></div>
+          <div class="scene-window"><div class="walkway"></div><div class="play-robot" id="playRobot" role="img" aria-label="よろよろと歩くロボットのトワ"></div><img id="npc" class="npc" alt="" hidden><div class="scene-vignette"></div></div>
+          <p id="speaker" class="speaker">トワ / 記憶のない歩行者</p>
+          <div class="character-note"><span class="note-dot"></span><span id="sceneNote">トワは、あなたの返事を待っている。</span></div>
+        </div>
+        <div class="question-pane">
+          <div class="progress-row"><span id="questionCount">01 / 12</span><div class="progress-track"><i id="progressBar"></i></div><span id="depthLabel">DEPTH 01</span></div>
+          <div class="question-kicker" id="questionKicker">最初の印象</div>
+          <h2 id="questionTitle" tabindex="-1">町に入る前、あなたは何を確認する？</h2>
+          <p class="question-sub" id="questionSub">考えすぎず、いちばん近いものを選んでください。</p>
+          <div class="answers" id="answers"></div>
+          <label class="reason-label" for="reason">答える前に、理由をひと言残す <span>任意・240文字</span></label>
+          <textarea id="reason" maxlength="240" rows="2" placeholder="同じ選択でも、その理由は人それぞれ。"></textarea>
+          <div class="answer-foot"><span id="saveMessage">この端末に自動保存 / 1〜4キーでも選択</span><button class="ghost-btn" id="backBtn" type="button" disabled>← 戻る</button></div>
+        </div>
+      </section>
+
+      <section class="result-screen screen" id="resultScreen" aria-labelledby="resultTitle">
+        <div class="result-top"><p class="eyebrow">JOURNEY / 12 SCENES</p><h2 id="resultTitle">今の選択が描いた、<br><em id="resultArchetype">静かな観測者</em>。</h2><p id="resultLead"></p><button class="primary-btn" id="restartBtn" type="button">旅の入口へ戻る ↻</button></div>
+        <section class="ai-letter" aria-labelledby="letterTitle"><div class="letter-head"><div><span class="eyebrow">LIQUID FOUNDATION MODEL</span><h3 id="letterTitle">トワから、あなたへの手紙。</h3></div><span class="model-tag">LFM2-350M / q4</span></div><p class="hint" id="aiStatus" role="status">LFM未生成</p><div id="aiOutput" class="ai-output" aria-busy="false"></div><button class="primary-btn" id="generateBtn" type="button">LFMで深く読み解く →</button><p class="hint">初回はモデルを取得します。解釈は仮説であり、正確な人格測定ではありません。</p></section>
+        <div class="result-grid"><div class="factor-card"><div class="card-head"><span>選択の傾向</span></div><p class="hint" id="confidence"></p><div id="factorBars"></div><p class="hint">ゲーム独自の加点指標です。LFMの推論や心理検査の点数ではありません。</p></div><div class="memo-card"><div class="card-head"><span>RECOVERED NOTE</span><span>NO. 12</span></div><p id="resultMemo"></p><div class="memo-sign">— EMBER / 旅の余白</div></div></div>
+        <details class="journey-log"><summary>選んだ道を振り返る</summary><ol id="answerLog"></ol></details>
+        <div class="secondary-actions"><button class="ghost-btn" id="exportBtn" type="button">旅の記録を保存</button><button class="ghost-btn" id="eraseBtn" type="button">この端末の回答を削除</button></div>
+      </section>
+    </main>
+    <footer class="footer"><span>EMBER / LIQUID AI × WEBGPU</span><span>回答はこの端末だけに保存されます</span></footer>
+  </div>
+  <audio id="bgm" src="assets/bgm.mp3" loop preload="metadata"></audio>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
